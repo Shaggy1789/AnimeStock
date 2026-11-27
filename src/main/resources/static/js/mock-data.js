@@ -500,6 +500,11 @@
   
   
   async function fetchProducts(query, options) {
+    const offline = global.AnimeStockProducts;
+    if (offline && typeof offline.fetchProducts === 'function') {
+      return offline.fetchProducts(query, options);
+    }
+
     const queryText = query === undefined ? '' : query;
     const opts = options || {};
 
@@ -509,14 +514,20 @@
       if (opts.category) params.set('category', opts.category);
       if (opts.inStockOnly) params.set('inStockOnly', 'true');
       if (opts.limit) params.set('limit', opts.limit);
-      
-      
-      if (opts.offset) params.set('offset', opts.offset);
+      // El backend no acepta offset: se envia solo el contrato real y se
+      // pagina el contenido ya recibido en cliente.
       const fetchOpts = {};
       if (opts.signal) fetchOpts.signal = opts.signal;
       const res = await fetch(API_BASE + '/api/products?' + params.toString(), fetchOpts);
       if (!res.ok) await apiError(res);
-      return res.json();
+      const page = await res.json();
+      if (!opts.offset || !page || !Array.isArray(page.content)) return page;
+      const offset = Math.max(0, Number(opts.offset) || 0);
+      const size = Number(page.size) || Number(opts.limit) || 24;
+      return Object.assign({}, page, {
+        content: page.content.slice(offset),
+        page: Math.floor(offset / size)
+      });
     }
 
     await delay();
@@ -545,6 +556,11 @@
 
   
   async function fetchProductById(productId) {
+    const offline = global.AnimeStockProducts;
+    if (offline && typeof offline.fetchProductById === 'function') {
+      return offline.fetchProductById(productId);
+    }
+
     if (API_BASE !== null) {
       const res = await fetch(API_BASE + '/api/products/' + productId);
       if (res.status === 404) return null;
@@ -580,9 +596,22 @@
   
   async function fetchCategories() {
     if (API_BASE !== null) {
-      const res = await fetch(API_BASE + '/api/categories');
-      if (!res.ok) await apiError(res);
-      return res.json();
+      try {
+        const res = await fetch(API_BASE + '/api/categories');
+        if (!res.ok) await apiError(res);
+        const rows = await res.json();
+        if (global.AnimeStockProducts && typeof global.AnimeStockProducts.rememberCategories === 'function') {
+          global.AnimeStockProducts.rememberCategories(rows);
+        }
+        return rows;
+      } catch (error) {
+        // Sin conexion: usar el ultimo catalogo de categorias guardado.
+        if (global.AnimeStockProducts && typeof global.AnimeStockProducts.getCachedCategories === 'function') {
+          const cached = await global.AnimeStockProducts.getCachedCategories();
+          if (cached.length) return cached;
+        }
+        throw error;
+      }
     }
     await delay();
     return clone(categoriesFromProducts());
@@ -600,7 +629,11 @@
         body: JSON.stringify({ nombre: name })
       });
       if (!res.ok) await apiError(res);
-      return res.json();
+      const created = await res.json();
+      if (global.AnimeStockProducts && typeof global.AnimeStockProducts.rememberCategories === 'function') {
+        global.AnimeStockProducts.rememberCategories([created]);
+      }
+      return created;
     }
 
     await delay();
@@ -612,6 +645,11 @@
 
   
   async function createProduct(payload) {
+    const offline = global.AnimeStockProducts;
+    if (offline && typeof offline.createProduct === 'function') {
+      return offline.createProduct(payload);
+    }
+
     const input = payload || {};
 
     if (API_BASE !== null) {
@@ -636,6 +674,11 @@
 
   
   async function updateProduct(productId, payload) {
+    const offline = global.AnimeStockProducts;
+    if (offline && typeof offline.updateProduct === 'function') {
+      return offline.updateProduct(productId, payload);
+    }
+
     const input = payload || {};
 
     if (API_BASE !== null) {
@@ -658,6 +701,11 @@
 
   
   async function deleteProduct(productId) {
+    const offline = global.AnimeStockProducts;
+    if (offline && typeof offline.deleteProduct === 'function') {
+      return offline.deleteProduct(productId);
+    }
+
     if (API_BASE !== null) {
       const res = await fetch(API_BASE + '/api/products/' + productId, { method: 'DELETE' });
       if (!res.ok) await apiError(res);
@@ -687,6 +735,16 @@
   }
 
   
+  async function syncImageCache(productId, imageUrl) {
+    const offline = global.AnimeStockProducts;
+    if (!offline || typeof offline.updateCachedImage !== 'function') return;
+    try {
+      await offline.updateCachedImage(productId, imageUrl);
+    } catch (error) {
+      console.warn('[AnimeStock] No se pudo actualizar la copia local de la imagen:', error);
+    }
+  }
+
   async function uploadProductImage(productId, file) {
     if (!file) throw dataError('No elegiste ninguna imagen', 'IMAGEN_VACIA');
 
@@ -699,7 +757,9 @@
         body: form
       });
       if (!res.ok) await apiError(res);
-      return res.json();
+      const result = await res.json();
+      await syncImageCache(productId, result && result.imageUrl);
+      return result;
     }
 
     await delay();
@@ -717,7 +777,9 @@
         method: 'DELETE'
       });
       if (!res.ok) await apiError(res);
-      return res.json();
+      const result = await res.json();
+      await syncImageCache(productId, result && result.imageUrl);
+      return result;
     }
 
     await delay();

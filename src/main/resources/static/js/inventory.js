@@ -14,6 +14,13 @@
   const REFERENCE_STOCK = 12;                              
   const IMAGE_ACCEPT = 'image/jpeg,image/png,image/webp';
 
+  const SYNC_LABELS = {
+    pending: 'Pendiente',
+    syncing: 'Sincronizando',
+    error: 'Error',
+    synced: 'Sincronizado'
+  };
+
   
   const DEFAULT_FILTERS = {
     q: '', category: 'todos', stock: 'todos', order: 'name_asc'
@@ -43,6 +50,8 @@
   let dom = {};
   let bound = false;
   let modal = null;       
+  let syncReloadTimer = null;
+  let lastSyncSignature = '';
 
   
   const $ = UI.$;
@@ -128,7 +137,9 @@
       case 'price_desc':
         return toNumber(b.price) - toNumber(a.price);
       case 'recent':
-        return toNumber(b.id) - toNumber(a.id);
+        // Los productos pendientes tienen un UUID como id: ordenar por id daba NaN.
+        return (new Date(b.updatedAt || 0).getTime() - new Date(a.updatedAt || 0).getTime())
+          || (toNumber(b.id) - toNumber(a.id));
       case 'name_asc':
       default:
         return String(a.name || '').localeCompare(String(b.name || ''), 'es');
@@ -249,11 +260,20 @@
     return wrap;
   }
 
+  function syncTitle(product) {
+    const status = product.syncStatus || 'synced';
+    if (status === 'error' && product.lastError) return product.lastError;
+    if (status === 'pending') return 'Guardado en este dispositivo. Se sincronizará con el servidor.';
+    if (status === 'syncing') return 'Sincronizando con el servidor…';
+    return 'Sincronizado con el servidor';
+  }
+
   function actionButton(action, product) {
     const definitions = {
       view: { icon: '👁️', label: 'Ver ' + product.name },
       edit: { icon: '✏️', label: 'Editar ' + product.name },
-      remove: { icon: '🗑️', label: 'Eliminar ' + product.name }
+      remove: { icon: '🗑️', label: 'Eliminar ' + product.name },
+      retry: { icon: '🔁', label: 'Reintentar sincronización de ' + product.name }
     };
     const def = definitions[action];
     const button = el('button', {
@@ -264,6 +284,7 @@
     button.addEventListener('click', function () {
       if (action === 'view') openProductModal(product, { readonly: true });
       else if (action === 'edit') openProductModal(product);
+      else if (action === 'retry') handleRetryProduct(product);
       else handleDelete(product);
     });
     return button;
@@ -295,6 +316,14 @@
       info.appendChild(badge);
     }
 
+    const syncStatus = product.syncStatus || 'synced';
+    const syncBadge = el('span', {
+      className: 'product-sync product-sync--' + syncStatus,
+      attrs: { title: syncTitle(product) }
+    });
+    syncBadge.textContent = SYNC_LABELS[syncStatus] || syncStatus;
+    info.appendChild(syncBadge);
+
     cell.appendChild(info);
     tdProduct.appendChild(cell);
     tr.appendChild(tdProduct);
@@ -323,6 +352,9 @@
     const tdActions = el('td', { className: 'table__actions' });
     tdActions.appendChild(actionButton('view', product));
     tdActions.appendChild(actionButton('edit', product));
+    if (product.syncStatus === 'error') {
+      tdActions.appendChild(actionButton('retry', product));
+    }
     tdActions.appendChild(actionButton('remove', product));
     tr.appendChild(tdActions);
 
@@ -414,6 +446,138 @@
   }
 
   
+  function currentSyncStatus() {
+    const Sync = global.AnimeStockSync;
+    return Sync && typeof Sync.getStatus === 'function' ? Sync.getStatus() : null;
+  }
+
+  function renderSyncBar(status) {
+    if (!dom.syncBar) return;
+    const info = status || currentSyncStatus() || {};
+    const online = info.online !== false;
+    const counts = info.counts || {};
+    const pending = Number(counts.pending) || 0;
+    const errors = Number(counts.error) || 0;
+
+    let text = 'Todo sincronizado.';
+    let tone = 'ok';
+
+    if (!online) {
+      text = 'Sin conexión: mostrando los productos guardados en este dispositivo.';
+      tone = 'offline';
+    } else if (info.syncing) {
+      text = 'Sincronizando cambios…';
+      tone = 'pending';
+    } else if (errors > 0) {
+      text = errors === 1
+        ? '1 producto con error de sincronización.'
+        : errors + ' productos con errores de sincronización.';
+      tone = 'error';
+    } else if (pending > 0) {
+      text = pending === 1
+        ? '1 cambio pendiente de sincronizar.'
+        : pending + ' cambios pendientes de sincronizar.';
+      tone = 'pending';
+    }
+
+    dom.syncText.textContent = text;
+    if (dom.syncDot) dom.syncDot.className = 'sync-bar__dot sync-bar__dot--' + tone;
+    if (dom.syncMeta) {
+      dom.syncMeta.textContent = info.lastSync
+        ? 'Última sincronización: ' + UI.formatDateTime(info.lastSync)
+        : '';
+    }
+    if (dom.syncNow) dom.syncNow.disabled = !online || !!info.syncing;
+    if (dom.retryFailed) dom.retryFailed.hidden = errors === 0;
+
+    if (dom.syncError) {
+      if (info.lastError) {
+        dom.syncError.hidden = false;
+        dom.syncError.textContent = info.lastError;
+      } else {
+        dom.syncError.hidden = true;
+        dom.syncError.textContent = '';
+      }
+    }
+  }
+
+  function scheduleSyncReload(detail) {
+    if (!detail || detail.syncing) return;
+    const counts = detail.counts || {};
+    const signature = [counts.pending, counts.error, counts.synced, detail.lastSync].join('|');
+    if (signature === lastSyncSignature) return;
+    lastSyncSignature = signature;
+    if (!state.loaded) return;
+    if (syncReloadTimer) global.clearTimeout(syncReloadTimer);
+    syncReloadTimer = global.setTimeout(function () {
+      syncReloadTimer = null;
+      load();
+    }, 350);
+  }
+
+  async function handleSyncNow() {
+    const Sync = global.AnimeStockSync;
+    if (!Sync) {
+      toast('El motor de sincronización no está disponible.', 'error');
+      return;
+    }
+    if (!navigator.onLine) {
+      toast('Sin conexión: los cambios quedan guardados localmente.', 'info');
+      return;
+    }
+
+    if (dom.syncNow) dom.syncNow.disabled = true;
+    try {
+      const result = await Sync.syncNow('manual');
+      if (result && result.failed > 0) {
+        toast('Sincronización finalizada con ' + result.failed + ' error(es).', 'error');
+      } else if (!result || !result.skipped) {
+        toast('Sincronización completada', 'success');
+      }
+      await load();
+    } catch (error) {
+      console.error('[AnimeStock] Error al sincronizar:', error);
+      toast((error && error.message) || 'No se pudo sincronizar', 'error');
+    } finally {
+      renderSyncBar();
+    }
+  }
+
+  async function handleRetryFailed() {
+    const Sync = global.AnimeStockSync;
+    if (!Sync) return;
+    try {
+      const result = await Sync.retryAll();
+      if (!result || result.retryable === 0) {
+        toast('No hay operaciones seguras para reintentar. Las creaciones requieren revisión manual (Fase 3).', 'info');
+      } else {
+        toast('Reintentando operaciones seguras…', 'info');
+      }
+      await load();
+    } catch (error) {
+      console.error('[AnimeStock] Error al reintentar:', error);
+      toast((error && error.message) || 'No se pudo reintentar', 'error');
+    }
+  }
+
+  async function handleRetryProduct(product) {
+    const Sync = global.AnimeStockSync;
+    if (!Sync || !product) return;
+    try {
+      const result = await Sync.retryProduct(product.localId);
+      if (result && result.retryable === false) {
+        toast(result.message, 'info');
+        return;
+      }
+      toast('Reintentando sincronización…', 'info');
+      await load();
+    } catch (error) {
+      console.error('[AnimeStock] Error al reintentar el producto:', error);
+      toast((error && error.message) || 'No se pudo reintentar', 'error');
+    }
+  }
+
+  
   function applyFilters(patch) {
     Object.keys(patch || {}).forEach(function (key) {
       state.filters[key] = patch[key];
@@ -485,6 +649,7 @@
 
     const result = await Data.fetchProducts('', {
       limit: CATALOG_LIMIT,
+      includeLocal: true,
       signal: controller.signal
     });
     return (result && Array.isArray(result.content)) ? result.content : [];
@@ -493,9 +658,17 @@
   async function load() {
     setLoading(true);
     try {
-      const results = await Promise.all([fetchCatalog(), loadCategories()]);
-      state.all = results[0] || [];
+      const catalog = await fetchCatalog();
 
+      let categoriesFailed = false;
+      try {
+        await loadCategories();
+      } catch (error) {
+        categoriesFailed = true;
+        console.warn('[AnimeStock] No se pudieron cargar las categorías:', error);
+      }
+
+      state.all = catalog || [];
       applyClientFilters();
       renderTable();
       renderPagination();
@@ -503,6 +676,13 @@
 
       state.loaded = true;
       setLoading(false);
+      renderSyncBar();
+
+      if (!navigator.onLine) {
+        showStatus('Sin conexión: mostrando los productos guardados en este dispositivo.');
+      } else if (categoriesFailed && !state.categories.length) {
+        showStatus('No se pudieron cargar las categorías. El resto del inventario está disponible.');
+      }
     } catch (error) {
       if (error && error.name === 'AbortError') return;
       console.error('[AnimeStock] No se pudo cargar el inventario:', error);
@@ -512,6 +692,7 @@
       renderPagination();
       renderKpis([]);
       setLoading(false);
+      renderSyncBar();
       showStatus('No se pudo cargar el inventario. Revisá la conexión con el servidor.');
     }
   }
@@ -520,7 +701,7 @@
   async function exportCsv() {
     if (dom.exportBtn) dom.exportBtn.disabled = true;
     try {
-      const result = await Data.fetchProducts('', { limit: CATALOG_LIMIT });
+      const result = await Data.fetchProducts('', { limit: CATALOG_LIMIT, includeLocal: true });
       const all = (result && Array.isArray(result.content)) ? result.content : [];
       const list = all
         .filter(matchesQuery)
@@ -790,7 +971,10 @@
     try {
       let saved;
       if (editing) {
-        saved = await Data.updateProduct(editing.id, payload);
+        const targetId = editing.serverId !== null && editing.serverId !== undefined
+          ? editing.serverId
+          : editing.localId;
+        saved = await Data.updateProduct(targetId, payload);
       } else {
         saved = await Data.createProduct(payload);
       }
@@ -798,9 +982,13 @@
       
       await persistImage(saved);
 
-      toast(editing ? 'Producto actualizado' : 'Producto creado', 'success');
+      toast(editing ? 'Producto actualizado' : 'Producto guardado en este dispositivo', 'success');
       closeProductModal();
       await load();
+
+      if (global.AnimeStockSync && navigator.onLine) {
+        global.AnimeStockSync.syncNow('after-save');
+      }
     } catch (error) {
       handleSaveError(error);
     } finally {
@@ -811,12 +999,20 @@
 
   
   async function persistImage(product) {
-    if (!product || !product.id) return;
+    if (!product) return;
+    const hasServerId = product.serverId !== null && product.serverId !== undefined;
+
+    if ((state.imageFile || state.imageRemoved) && !hasServerId) {
+      toast('La imagen no se sincroniza en esta fase: el producto quedó guardado sin imagen.', 'info');
+      return;
+    }
+    if (!hasServerId) return;
+
     try {
       if (state.imageFile) {
-        await Data.uploadProductImage(product.id, state.imageFile);
+        await Data.uploadProductImage(product.serverId, state.imageFile);
       } else if (state.imageRemoved) {
-        await Data.deleteProductImage(product.id);
+        await Data.deleteProductImage(product.serverId);
       }
     } catch (error) {
       if (error && error.status === 405) {
@@ -848,6 +1044,11 @@
 
   
   async function handleDelete(product) {
+    if (!product || product.serverId === null || product.serverId === undefined) {
+      toast('Este producto todavía no se sincronizó. No se puede eliminar sin conexión.', 'info');
+      return;
+    }
+
     const confirmed = await confirmDialog({
       title: 'Eliminar producto',
       message: 'Se eliminará "' + (product.name || 'el producto') + '" del inventario. '
@@ -857,7 +1058,7 @@
     if (!confirmed) return;
 
     try {
-      await Data.deleteProduct(product.id);
+      await Data.deleteProduct(product.serverId);
       toast('Producto eliminado', 'success');
       await load();
     } catch (error) {
@@ -901,6 +1102,15 @@
       filters: $('#inventoryFilters'),
       kpis: $('#inventoryKpis'),
       tableCard: $('#inventoryTableCard'),
+
+      
+      syncBar: $('#inventorySyncBar'),
+      syncDot: $('#inventorySyncDot'),
+      syncText: $('#inventorySyncText'),
+      syncMeta: $('#inventorySyncMeta'),
+      syncNow: $('#inventorySyncNow'),
+      retryFailed: $('#inventoryRetryFailed'),
+      syncError: $('#inventorySyncError'),
 
       
       form: $('#productForm'),
@@ -1014,6 +1224,17 @@
       dom.newProduct.addEventListener('click', function () { openProductModal(null); });
     }
 
+    if (dom.syncNow) dom.syncNow.addEventListener('click', handleSyncNow);
+    if (dom.retryFailed) dom.retryFailed.addEventListener('click', handleRetryFailed);
+
+    global.addEventListener('animestock:sync-status', function (event) {
+      renderSyncBar(event.detail);
+      scheduleSyncReload(event.detail);
+    });
+
+    global.addEventListener('online', function () { renderSyncBar(); });
+    global.addEventListener('offline', function () { renderSyncBar(); });
+
     if (dom.filtersToggle && dom.filters) {
       dom.filtersToggle.addEventListener('click', function () {
         const collapsed = dom.filters.classList.toggle('is-collapsed');
@@ -1054,6 +1275,10 @@
     initModal();
     bindEvents();
     syncFilterInputs();
+    renderSyncBar();
+    if (global.AnimeStockSync && typeof global.AnimeStockSync.refreshStatus === 'function') {
+      global.AnimeStockSync.refreshStatus();
+    }
   }
 
   

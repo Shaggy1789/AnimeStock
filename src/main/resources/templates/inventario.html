@@ -31,6 +31,23 @@
 
         <p class="panel-status" id="inventoryStatus" role="status" hidden></p>
 
+        <section class="sync-bar" id="inventorySyncBar" aria-label="Estado de sincronizaci&oacute;n">
+          <div class="sync-bar__info">
+            <span class="sync-bar__dot" id="inventorySyncDot" aria-hidden="true"></span>
+            <span class="sync-bar__text" id="inventorySyncText" role="status">Comprobando estado&hellip;</span>
+            <span class="sync-bar__meta" id="inventorySyncMeta"></span>
+          </div>
+          <div class="sync-bar__actions">
+            <button class="btn btn--ghost btn--sm" type="button" id="inventorySyncNow">
+              Sincronizar ahora
+            </button>
+            <button class="btn btn--ghost btn--sm" type="button" id="inventoryRetryFailed" hidden>
+              Reintentar fallidos
+            </button>
+          </div>
+        </section>
+        <p class="sync-bar__error" id="inventorySyncError" role="alert" hidden></p>
+
         <div class="mini-kpi-grid" id="inventoryKpis" role="list" aria-label="Resumen del inventario"></div>
 
         <button class="filters-toggle" type="button" id="inventoryFiltersToggle" aria-expanded="true"

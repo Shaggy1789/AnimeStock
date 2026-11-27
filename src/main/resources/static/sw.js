@@ -1,4 +1,4 @@
-const NOMBRE_CACHE = "animestock-v10";
+const NOMBRE_CACHE = "animestock-v12";
 const ESTRATEGIA = "cache-only";
 const RECURSO_PRUEBA = "mensaje.txt";
 
@@ -17,6 +17,9 @@ self.addEventListener("install", function (evento) {
                 ]);
             })
     );
+
+    // Tomar el control apenas se instala la nueva version.
+    evento.waitUntil(self.skipWaiting());
 });
 
 self.addEventListener("activate", (evento) => {
@@ -34,6 +37,7 @@ self.addEventListener("activate", (evento) => {
                     })
                 )
             })
+            .then(function () { return self.clients.claim(); })
     )
 });
 
@@ -116,8 +120,35 @@ self.addEventListener("fetch", function (evento) {
                 if (respuesta) {
                     return respuesta;
                 }
-                return fetch(evento.request).catch(function () {
-                    return new Response("", { status: 200 });
+                return fetch(evento.request).then(function (respuestaRed) {
+                    // Guardar paginas y recursos estaticos para poder recargarlos sin red.
+                    // Las respuestas /api/ no se cachean: las datos offline viven en IndexedDB.
+                    if (
+                        evento.request.method === "GET" &&
+                        url.origin === self.location.origin &&
+                        url.pathname.indexOf("/api/") !== 0 &&
+                        respuestaRed.ok
+                    ) {
+                        const copia = respuestaRed.clone();
+                        evento.waitUntil(
+                            caches.open(NOMBRE_CACHE).then(function (cache) {
+                                return cache.put(evento.request, copia);
+                            })
+                        );
+                    }
+                    return respuestaRed;
+                }).catch(function () {
+                    // Nunca enmascarar un fallo de red como una respuesta vacia exitosa.
+                    if (url.pathname.indexOf("/api/") === 0) {
+                        return new Response(JSON.stringify({ message: "Sin conexión con el servidor." }), {
+                            status: 503,
+                            headers: { "Content-Type": "application/json; charset=utf-8" }
+                        });
+                    }
+                    return new Response("Sin conexión", {
+                        status: 503,
+                        headers: { "Content-Type": "text/plain; charset=utf-8" }
+                    });
                 });
             })
     );

@@ -315,7 +315,8 @@
   // ==========================================
 
   /**
-   * Add a mutation to the queue (or upsert by idempotencyKey)
+   * Add a new mutation to the queue.
+   * Use upsertMutation() when the mutation may already exist for the same idempotencyKey.
    * @param {Object} mutation - { entity, operation, localId, payload, idempotencyKey, ... }
    * @returns {Promise<number>} mutation id (auto-increment)
    */
@@ -343,6 +344,102 @@
         };
         req.onerror = () => reject(req.error);
       });
+    });
+  }
+
+  /**
+   * Crear o actualizar una mutacion dentro de UNA sola transaccion readwrite.
+   * Evita la carrera entre la consulta por idempotencyKey y la escritura.
+   * Las mutaciones 'done' no se modifican.
+   * @param {Object} mutation - { entity, operation, localId, payload, idempotencyKey, ... }
+   * @returns {Promise<number>} mutation id
+   */
+  function upsertMutation(mutation) {
+    const now = new Date().toISOString();
+
+    return runTransaction([STORE_CONFIG.mutations.name], 'readwrite', tx => {
+      return new Promise((resolve, reject) => {
+        const store = tx.objectStore(STORE_CONFIG.mutations.name);
+        const req = store.index('by_idempotency_key').get(mutation.idempotencyKey);
+
+        req.onsuccess = () => {
+          const existing = req.result;
+          if (existing && existing.status === 'done') {
+            resolve({ id: existing.id, created: false, changed: false });
+            return;
+          }
+          if (existing) {
+            // Conserva estado/contadores: una edicion posterior no rehabilita una mutacion terminada.
+            const merged = Object.assign({}, existing, { payload: mutation.payload, updatedAt: now });
+            store.put(merged);
+            resolve({ id: existing.id, created: false, changed: true });
+            return;
+          }
+          const record = {
+            entity: mutation.entity || 'product',
+            operation: mutation.operation,
+            localId: mutation.localId,
+            payload: mutation.payload,
+            idempotencyKey: mutation.idempotencyKey,
+            status: 'pending',
+            retryCount: 0,
+            lastError: null,
+            createdAt: now,
+            updatedAt: now
+          };
+          const addReq = store.add(record);
+          addReq.onsuccess = () => resolve({ id: addReq.result, created: true, changed: true });
+          addReq.onerror = () => reject(addReq.error);
+        };
+        req.onerror = () => reject(req.error);
+      });
+    }).then(result => {
+      if (result.created) emit('mutation-added', { idempotencyKey: mutation.idempotencyKey });
+      else if (result.changed) emit('mutation-updated', { id: result.id });
+      return result.id;
+    });
+  }
+
+  /**
+   * Tomar posesion de una mutacion 'pending' en una sola transaccion readwrite.
+   * Solo una pestaña puede ganar: la segunda ve el estado 'syncing' y obtiene null.
+   * @param {string} idempotencyKey
+   * @param {Object} [options] - { now: número (ms) }
+   * @returns {Promise<Object|null>} mutacion reclamada con estado 'syncing'
+   */
+  function claimMutation(idempotencyKey, options) {
+    const opts = options || {};
+    const now = opts.now === undefined ? Date.now() : opts.now;
+    const nowIso = new Date(now).toISOString();
+
+    return runTransaction([STORE_CONFIG.mutations.name], 'readwrite', tx => {
+      return new Promise((resolve, reject) => {
+        const store = tx.objectStore(STORE_CONFIG.mutations.name);
+        const req = store.index('by_idempotency_key').get(idempotencyKey);
+
+        req.onsuccess = () => {
+          const current = req.result;
+          if (!current || current.status !== 'pending') {
+            resolve(null);
+            return;
+          }
+          if (current.nextRetryAt && new Date(current.nextRetryAt).getTime() > now) {
+            resolve(null);
+            return;
+          }
+          const claimed = Object.assign({}, current, {
+            status: 'syncing',
+            lastAttemptAt: nowIso,
+            updatedAt: nowIso
+          });
+          store.put(claimed);
+          resolve(claimed);
+        };
+        req.onerror = () => reject(req.error);
+      });
+    }).then(claimed => {
+      if (claimed) emit('mutation-updated', { id: claimed.id, status: 'syncing' });
+      return claimed;
     });
   }
 
@@ -578,6 +675,8 @@
 
     // Mutations
     addMutation,
+    upsertMutation,
+    claimMutation,
     getMutationByIdempotencyKey,
     getPendingMutations,
     getMutationsByStatus,
