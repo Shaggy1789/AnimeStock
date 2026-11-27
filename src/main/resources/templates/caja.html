@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html lang="es" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments/layout :: head('Caja')}"></head>
+
+<body data-page="caja">
+
+  <aside th:replace="~{fragments/layout :: sidebar('caja')}"></aside>
+  <div th:replace="~{fragments/layout :: scrim}"></div>
+
+  <div class="app">
+
+    <header th:replace="~{fragments/layout :: topbar('Caja', 'Ingresos, egresos y saldo')}"></header>
+
+    <main class="main" id="main">
+
+      <section class="panel is-active" id="panel-caja" data-panel="caja" aria-labelledby="cajaTitle">
+        <div class="panel-head">
+          <div>
+            <h3 class="panel-head__title" id="cajaTitle">Caja del día</h3>
+            <p class="panel-head__text">Cada venta cobrada suma un ingreso; cada anulación, un egreso.</p>
+          </div>
+          <div class="panel-head__actions">
+            <div class="field">
+              <label class="field__label" for="cashRangeFilter">Período</label>
+              <select class="select" id="cashRangeFilter">
+                <option value="hoy" selected>Hoy</option>
+                <option value="7d">Últimos 7 días</option>
+                <option value="mes">Este mes</option>
+                <option value="anio">Este año</option>
+                <option value="todo">Todo</option>
+              </select>
+            </div>
+            <button class="btn btn--ghost" type="button" id="cashNewSale">
+              <span aria-hidden="true">+</span> Nueva venta
+            </button>
+            <button class="btn btn--primary" type="button" id="cashNewMovement">
+              <span aria-hidden="true">+</span> Nuevo movimiento
+            </button>
+          </div>
+        </div>
+
+        <p class="panel-status" id="cashStatus" role="status" hidden></p>
+
+        <article class="cash-session" id="cashSessionBar">
+          <div class="cash-session__info">
+            <span class="cash-session__icon" id="cashSessionIcon" aria-hidden="true">🔒</span>
+            <div class="cash-session__body">
+              <p class="cash-session__title" id="cashSessionState">Caja cerrada</p>
+              <p class="cash-session__text" id="cashSessionDetail">Abrí la caja para registrar el fondo inicial.</p>
+            </div>
+          </div>
+          <button class="btn btn--ghost btn--sm" type="button" id="cashSessionAction">Abrir caja</button>
+        </article>
+
+        <div class="mini-kpi-grid" id="cashKpis" role="list" aria-label="Resumen de caja"></div>
+
+        <article class="card card--table" id="cashTableCard">
+          <div class="table-scroll" tabindex="0" role="region"
+            aria-label="Tabla de movimientos de caja, deslizable horizontalmente">
+            <table class="table">
+              <caption class="sr-only">Movimientos de caja del período seleccionado</caption>
+              <thead>
+                <tr>
+                  <th scope="col">Fecha</th>
+                  <th scope="col">Tipo</th>
+                  <th scope="col">Descripción</th>
+                  <th scope="col">Comprobante</th>
+                  <th scope="col" class="table__num">Importe</th>
+                </tr>
+              </thead>
+              <tbody id="cashRows"></tbody>
+            </table>
+          </div>
+        </article>
+
+        <div class="empty" id="cashEmpty" hidden>
+          <span class="empty__icon" aria-hidden="true">🏦</span>
+          <h4 class="empty__title">Sin movimientos en este período</h4>
+          <p class="empty__text">Registrá una venta cobrada o cargá un movimiento manual.</p>
+        </div>
+
+        <p class="panel-info" id="cashInfo"></p>
+      </section>
+
+    </main>
+  </div>
+
+  <div th:replace="~{fragments/layout :: cashModal}"></div>
+  <div th:replace="~{fragments/layout :: cashSessionModal}"></div>
+  <div th:replace="~{fragments/layout :: checkoutModal}"></div>
+  <div th:replace="~{fragments/layout :: receiptModal}"></div>
+  <div th:replace="~{fragments/layout :: toasts}"></div>
+
+  <th:block th:replace="~{fragments/layout :: scripts}"></th:block>
+  <script src="/js/cash.js"></script>
+
+</body>
+
+</html>

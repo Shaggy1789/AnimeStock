@@ -1,0 +1,6 @@
+
+@media print {
+  body.report-printing > * { display: none !important; }
+  #panel-reports { display: block !important; }
+  .filters-bar, .panel-head__actions, #reportsExport { display: none !important; }
+}

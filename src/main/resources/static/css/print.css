@@ -1,0 +1,135 @@
+
+
+
+@page {
+  size: 80mm auto;
+  margin: 4mm;
+}
+
+
+@page a4sheet {
+  size: A4 portrait;
+  margin: 12mm;
+}
+
+
+@media print {
+  body.receipt-format-a4 { page: a4sheet; }
+}
+
+
+@media print {
+  html,
+  body {
+    background: #ffffff !important;
+    background-image: none !important;
+    margin: 0;
+    padding: 0;
+  }
+
+  
+  body > * { display: none !important; }
+
+  
+  body > #receiptModal { display: block !important; }
+
+  body > #receiptModal > .modal,
+  body > #receiptModal > .modal > .modal__body {
+    display: block !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    border: 0 !important;
+    border-radius: 0 !important;
+    box-shadow: none !important;
+    max-height: none !important;
+    width: auto !important;
+    min-height: 0 !important;
+    overflow: visible !important;
+    transform: none !important;
+    opacity: 1 !important;
+  }
+
+  body > #receiptModal > .modal > .modal__body { padding: 0 !important; }
+
+  
+  #receiptModal .modal__head,
+  #receiptModal .modal__foot { display: none !important; }
+
+  
+  #receipt-mount {
+    display: flex !important;
+    justify-content: center;
+    align-items: flex-start;
+    width: 100%;
+    padding: 0 !important;
+    margin: 0 !important;
+    border: 0 !important;
+    background: transparent !important;
+  }
+
+  
+  body > #receipt-mount { display: flex !important; justify-content: center; }
+}
+
+
+@media print {
+  .ticket {
+    width: auto !important;
+    max-width: none !important;
+    margin: 0 auto !important;
+    padding: 0 !important;
+    color: #000000 !important;
+    background: #ffffff !important;
+    border: 0 !important;
+    border-radius: 0 !important;
+    box-shadow: none !important;
+    font-family: "Courier New", Courier, monospace;
+    font-size: 11px;
+    line-height: 1.4;
+  }
+
+  
+  body.receipt-format-a4 .ticket {
+    width: 100% !important;
+    max-width: 100% !important;
+  }
+
+  
+  .ticket__items thead { display: table-header-group; }
+  .ticket__items tr,
+  .ticket__item-name,
+  .ticket__total,
+  .ticket__foot { break-inside: avoid; page-break-inside: avoid; }
+
+  .ticket__total { border-top: 1.5px solid #000000; }
+
+  
+  .ticket,
+  .ticket * { color: #000000 !important; }
+
+  
+  .ticket__items th { border-bottom: 1px dashed #000000; }
+  .ticket__items td { border-bottom: 1px dotted #666666; }
+  .ticket__foot { border-top: 1px dashed #000000; }
+
+  
+  .ticket__qr,
+  .ticket__qr svg {
+    display: block !important;
+    width: 26mm;
+    height: 26mm;
+  }
+
+  
+  .ticket__qr svg rect:first-child { fill: #ffffff; }
+  .ticket__qr svg g { fill: #000000; }
+}
+
+
+@media print {
+  .ticket {
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+}
+

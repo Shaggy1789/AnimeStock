@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html lang="es" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments/layout :: head('Dashboard')}"></head>
+
+<body data-page="dashboard">
+
+  <aside th:replace="~{fragments/layout :: sidebar('dashboard')}"></aside>
+  <div th:replace="~{fragments/layout :: scrim}"></div>
+
+  <div class="app">
+
+    <header th:replace="~{fragments/layout :: topbar('Dashboard', 'Resumen general de tu tienda')}"></header>
+
+    <main class="main" id="main">
+
+      <section class="panel is-active" id="panel-dashboard" data-panel="dashboard" aria-labelledby="topbarTitle">
+
+        <header class="greeting">
+          <h3 class="greeting__title">¡Hola de nuevo!</h3>
+          <p class="greeting__text">Aquí tienes el resumen de tu tienda AnimeStock.</p>
+        </header>
+
+        <div class="loading" id="dashboardLoading" role="status" aria-live="polite">
+          <span class="loading__spinner" aria-hidden="true"></span>
+          Cargando datos del panel…
+        </div>
+
+        <div id="dashboardContent" hidden>
+
+          <div class="kpi-grid" id="kpiGrid" role="list" aria-label="Indicadores principales"></div>
+
+          <div class="charts-grid">
+            <article class="card card--chart" aria-labelledby="chartRevenueTitle">
+              <header class="card__head">
+                <h4 class="card__title" id="chartRevenueTitle">Ingresos Mensuales</h4>
+                <p class="card__subtitle" id="chartRevenueSubtitle">Total del año</p>
+              </header>
+              <div class="chart-wrap" id="revenueChart"></div>
+            </article>
+
+            <article class="card card--chart" aria-labelledby="chartCategoryTitle">
+              <header class="card__head">
+                <h4 class="card__title" id="chartCategoryTitle">Ventas por Categoría</h4>
+                <p class="card__subtitle">Distribución del mes</p>
+              </header>
+              <div class="chart-wrap chart-wrap--donut" id="categoryChart"></div>
+            </article>
+          </div>
+
+          <article class="card card--table" aria-labelledby="recentSalesTitle">
+            <header class="card__head card__head--row">
+              <div>
+                <h4 class="card__title" id="recentSalesTitle">Últimas Ventas</h4>
+                <p class="card__subtitle">Movimientos recientes de la tienda</p>
+              </div>
+              <a class="btn btn--ghost btn--sm" th:href="@{/ventas}">Ver todas</a>
+            </header>
+
+            <div class="table-scroll" tabindex="0" role="region"
+              aria-label="Tabla de últimas ventas, deslizable horizontalmente">
+              <table class="table">
+                <caption class="sr-only">Listado de las últimas ventas registradas en AnimeStock</caption>
+                <thead>
+                  <tr>
+                    <th scope="col">Cliente</th>
+                    <th scope="col">Producto</th>
+                    <th scope="col">Fecha</th>
+                    <th scope="col">Pago</th>
+                    <th scope="col">Stock</th>
+                    <th scope="col" class="table__num">Monto</th>
+                    <th scope="col">Estado</th>
+                  </tr>
+                </thead>
+                <tbody id="salesTableBody"></tbody>
+              </table>
+            </div>
+          </article>
+
+        </div>
+      </section>
+
+    </main>
+  </div>
+
+  <div th:replace="~{fragments/layout :: checkoutModal}"></div>
+  <div th:replace="~{fragments/layout :: receiptModal}"></div>
+  <div th:replace="~{fragments/layout :: toasts}"></div>
+
+  <th:block th:replace="~{fragments/layout :: scripts}"></th:block>
+  <script src="/js/charts.js"></script>
+  <script src="/js/dashboard.js"></script>
+  <p id="mensaje">Cargando...</p>
+  <script>
+    fetch("mensaje.txt")
+            .then(r => r.text())
+            .then(t => document.getElementById("mensaje").textContent = t)
+            .catch(() => document.getElementById("mensaje").textContent = "Error al cargar");
+  </script>
+</body>
+
+</html>

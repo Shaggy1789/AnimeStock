@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html lang="es" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments/layout :: head('Pedidos')}"></head>
+
+<body data-page="pedidos">
+
+  <aside th:replace="~{fragments/layout :: sidebar('pedidos')}"></aside>
+  <div th:replace="~{fragments/layout :: scrim}"></div>
+
+  <div class="app">
+
+    <header th:replace="~{fragments/layout :: topbar('Pedidos', 'Pedidos pendientes y en curso')}"></header>
+
+    <main class="main" id="main">
+
+      <section class="panel is-active" id="panel-pedidos" data-panel="pedidos" aria-labelledby="pedidosTitle">
+        <div class="panel-head">
+          <div>
+            <h3 class="panel-head__title" id="pedidosTitle">Pedidos</h3>
+            <p class="panel-head__text">Seguimiento de ventas por cobrar y en camino. Cobrá pendientes sin salir de acá.</p>
+          </div>
+          <div class="panel-head__actions">
+            <button class="btn btn--ghost" type="button" id="ordersRefresh">
+              <span aria-hidden="true">⟳</span> Actualizar
+            </button>
+            <button class="btn btn--primary" type="button" id="ordersNewSale">
+              <span aria-hidden="true">+</span> Nuevo pedido
+            </button>
+          </div>
+        </div>
+
+        <p class="panel-status" id="ordersStatus" role="status" hidden></p>
+
+        <div class="mini-kpi-grid" id="ordersKpis" role="list" aria-label="Resumen de pedidos"></div>
+
+        <div class="board" id="ordersBoard">
+          <section class="board__col" aria-labelledby="ordersPendingTitle">
+            <header class="board__col-head">
+              <h4 class="board__col-title" id="ordersPendingTitle">
+                <span class="board__dot board__dot--warning" aria-hidden="true"></span> Por cobrar
+              </h4>
+              <span class="board__count" id="ordersPendingCount">0</span>
+            </header>
+            <div class="board__list" id="ordersPendingList"></div>
+            <div class="empty empty--sm" id="ordersPendingEmpty" hidden>
+              <span class="empty__icon" aria-hidden="true">🎉</span>
+              <p class="empty__text">No hay pedidos por cobrar. ¡Todo al día!</p>
+            </div>
+          </section>
+
+          <section class="board__col" aria-labelledby="ordersShippedTitle">
+            <header class="board__col-head">
+              <h4 class="board__col-title" id="ordersShippedTitle">
+                <span class="board__dot board__dot--info" aria-hidden="true"></span> En camino
+              </h4>
+              <span class="board__count" id="ordersShippedCount">0</span>
+            </header>
+            <div class="board__list" id="ordersShippedList"></div>
+            <div class="empty empty--sm" id="ordersShippedEmpty" hidden>
+              <span class="empty__icon" aria-hidden="true">🚚</span>
+              <p class="empty__text">No hay pedidos en camino.</p>
+            </div>
+          </section>
+        </div>
+      </section>
+
+    </main>
+  </div>
+
+  <div th:replace="~{fragments/layout :: checkoutModal}"></div>
+  <div th:replace="~{fragments/layout :: receiptModal}"></div>
+  <div th:replace="~{fragments/layout :: toasts}"></div>
+
+  <th:block th:replace="~{fragments/layout :: scripts}"></th:block>
+  <script src="/js/orders.js"></script>
+
+</body>
+
+</html>

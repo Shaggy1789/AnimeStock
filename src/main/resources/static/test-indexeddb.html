@@ -1,0 +1,417 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>AnimeStock IndexedDB Test</title>
+  <style>
+    body { font-family: system-ui, sans-serif; max-width: 900px; margin: 2rem auto; padding: 0 1rem; line-height: 1.6; }
+    h1 { color: #333; }
+    .test-section { background: #f8f9fa; border: 1px solid #dee2e6; border-radius: 8px; padding: 1rem; margin: 1rem 0; }
+    .test-section h3 { margin-top: 0; color: #495057; }
+    button { background: #0d6efd; color: white; border: none; padding: 0.5rem 1rem; border-radius: 4px; cursor: pointer; margin: 0.25rem; }
+    button:hover { background: #0b5ed7; }
+    button:disabled { background: #6c757d; cursor: not-allowed; }
+    .log { background: #1e1e1e; color: #d4d4d4; padding: 1rem; border-radius: 4px; font-family: 'Consolas', monospace; font-size: 0.85rem; max-height: 400px; overflow: auto; white-space: pre-wrap; }
+    .log .ok { color: #4ec9b0; }
+    .log .error { color: #f14c4c; }
+    .log .info { color: #9cdcfe; }
+    .log .warn { color: #dcdcaa; }
+    .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1rem; }
+    .card { background: white; border: 1px solid #dee2e6; border-radius: 8px; padding: 1rem; }
+    .card h4 { margin: 0 0 0.5rem; font-size: 0.9rem; color: #6c757d; }
+    .card .value { font-size: 1.5rem; font-weight: bold; color: #212529; }
+  </style>
+</head>
+<body>
+  <h1>🧪 AnimeStock IndexedDB - Pruebas de la Etapa 1</h1>
+  <p>Esta página verifica la implementación de <code>indexeddb.js</code> sin necesidad del backend Spring Boot.</p>
+
+  <div class="test-section">
+    <h3>1. Inicialización y Estado</h3>
+    <button id="btn-init">Inicializar DB</button>
+    <button id="btn-check-stores" disabled>Verificar Object Stores</button>
+    <button id="btn-clear-db" style="background:#dc3545;">Limpiar BD Completa</button>
+    <div class="grid" id="init-stats"></div>
+  </div>
+
+  <div class="test-section">
+    <h3>2. Productos - CRUD Básico</h3>
+    <button id="btn-create-product">Crear Producto (offline)</button>
+    <button id="btn-create-with-server">Crear con serverId</button>
+    <button id="btn-list-all">Listar Todos</button>
+    <button id="btn-list-pending">Listar Pendientes</button>
+    <button id="btn-get-by-server">Buscar por serverId</button>
+    <button id="btn-update-product" disabled>Actualizar Último</button>
+    <button id="btn-delete-product" disabled>Eliminar Último</button>
+  </div>
+
+  <div class="test-section">
+    <h3>3. Mutaciones - Cola de Operaciones</h3>
+    <button id="btn-add-mutation">Añadir Mutación Create</button>
+    <button id="btn-add-mutation-update">Añadir Mutación Update</button>
+    <button id="btn-list-pending-mut">Listar Pendientes</button>
+    <button id="btn-list-all-mut">Listar Todas</button>
+    <button id="btn-update-mutation" disabled>Marcar como Done</button>
+  </div>
+
+  <div class="test-section">
+    <h3>4. Meta - Configuración</h3>
+    <button id="btn-set-meta">Set lastSync</button>
+    <button id="btn-get-meta">Get lastSync</button>
+    <button id="btn-get-offset">Get serverTimeOffset</button>
+  </div>
+
+  <div class="test-section">
+    <h3>5. Eventos y Utilidades</h3>
+    <button id="btn-test-events">Probar Eventos</button>
+    <button id="btn-gen-uuid">Generar UUID</button>
+    <button id="btn-count-all">Contar Todo</button>
+  </div>
+
+  <div class="test-section">
+    <h3>6. Consola de Pruebas</h3>
+    <div id="log" class="log">[Listo] Abre la consola del navegador (F12) para ver logs detallados.\n</div>
+    <button id="btn-clear-log">Limpiar Log</button>
+  </div>
+
+  <script src="./js/indexeddb.js"></script>
+  <script>
+    const logEl = document.getElementById('log');
+    const statsEl = document.getElementById('init-stats');
+    let lastProductLocalId = null;
+    let lastMutationId = null;
+
+    function log(msg, type = 'info') {
+      const timestamp = new Date().toLocaleTimeString();
+      const line = document.createElement('div');
+      line.className = type;
+      line.textContent = `[${timestamp}] ${msg}`;
+      logEl.appendChild(line);
+      logEl.scrollTop = logEl.scrollHeight;
+      console.log(`[Test] ${msg}`);
+    }
+
+    function setStats(stats) {
+      statsEl.innerHTML = Object.entries(stats).map(([k, v]) => `
+        <div class="card"><h4>${k}</h4><div class="value">${v}</div></div>
+      `).join('');
+    }
+
+    function enable(btnId, enabled) {
+      document.getElementById(btnId).disabled = !enabled;
+    }
+
+    // 1. Inicialización
+    document.getElementById('btn-init').onclick = async () => {
+      try {
+        log('Inicializando IndexedDB...');
+        await AnimeStockIDB.init();
+        log('✅ DB inicializada correctamente', 'ok');
+        enable('btn-check-stores', true);
+        enable('btn-clear-db', true);
+      } catch (e) {
+        log(`❌ Error: ${e.message}`, 'error');
+      }
+    };
+
+    document.getElementById('btn-check-stores').onclick = async () => {
+      try {
+        const db = await AnimeStockIDB.openDatabase();
+        const stores = Array.from(db.objectStoreNames);
+        log(`Object stores encontrados: ${stores.join(', ')}`, 'ok');
+        setStats({ Stores: stores.length, Names: stores.join(', ') });
+      } catch (e) {
+        log(`❌ Error: ${e.message}`, 'error');
+      }
+    };
+
+    document.getElementById('btn-clear-db').onclick = async () => {
+      if (!confirm('¿Eliminar TODA la base de datos AnimeStockDB?')) return;
+      try {
+        await new Promise((resolve, reject) => {
+          const req = indexedDB.deleteDatabase('AnimeStockDB');
+          req.onsuccess = () => resolve();
+          req.onerror = () => reject(req.error);
+        });
+        log('🗑️ Base de datos eliminada', 'warn');
+        // Re-inicializar
+        await AnimeStockIDB.init();
+        log('✅ DB recreada', 'ok');
+      } catch (e) {
+        log(`❌ Error: ${e.message}`, 'error');
+      }
+    };
+
+    // 2. Productos
+    document.getElementById('btn-create-product').onclick = async () => {
+      try {
+        const localId = AnimeStockIDB.generateLocalId();
+        const product = {
+          localId,
+          name: 'Test Product ' + Date.now(),
+          anime: 'Test Anime',
+          category: 'Figuras',
+          categoryId: 1,
+          cost: 100.00,
+          price: 250.00,
+          stock: 10,
+          minStock: 2,
+          active: true,
+          sku: null
+        };
+        await AnimeStockIDB.putProduct(product);
+        lastProductLocalId = localId;
+        log(`✅ Producto creado: ${localId} (syncStatus: pending)`, 'ok');
+        enable('btn-update-product', true);
+        enable('btn-delete-product', true);
+      } catch (e) {
+        log(`❌ Error: ${e.message}`, 'error');
+      }
+    };
+
+    document.getElementById('btn-create-with-server').onclick = async () => {
+      try {
+        const localId = AnimeStockIDB.generateLocalId();
+        const product = {
+          localId,
+          serverId: 999,
+          name: 'Server Product ' + Date.now(),
+          anime: 'Server Anime',
+          category: 'Peluches',
+          categoryId: 2,
+          cost: 50.00,
+          price: 120.00,
+          stock: 5,
+          minStock: 1,
+          active: true,
+          sku: 'PLU-TST-A1',
+          syncStatus: 'synced'
+        };
+        await AnimeStockIDB.putProduct(product);
+        log(`✅ Producto con serverId creado: ${localId} → serverId: 999`, 'ok');
+      } catch (e) {
+        log(`❌ Error: ${e.message}`, 'error');
+      }
+    };
+
+    document.getElementById('btn-list-all').onclick = async () => {
+      try {
+        const products = await AnimeStockIDB.getAllProducts();
+        log(`📋 Total productos: ${products.length}`, 'info');
+        products.forEach(p => log(`  - ${p.localId.substring(0,8)}... | ${p.name} | serverId: ${p.serverId ?? 'null'} | status: ${p.syncStatus}`));
+      } catch (e) {
+        log(`❌ Error: ${e.message}`, 'error');
+      }
+    };
+
+    document.getElementById('btn-list-pending').onclick = async () => {
+      try {
+        const products = await AnimeStockIDB.getProductsByStatus('pending');
+        log(`⏳ Productos pendientes: ${products.length}`, 'info');
+        products.forEach(p => log(`  - ${p.localId.substring(0,8)}... | ${p.name}`));
+      } catch (e) {
+        log(`❌ Error: ${e.message}`, 'error');
+      }
+    };
+
+    document.getElementById('btn-get-by-server').onclick = async () => {
+      try {
+        const product = await AnimeStockIDB.getProductByServerId(999);
+        if (product) {
+          log(`🔍 Encontrado por serverId: ${product.localId} | ${product.name}`, 'ok');
+        } else {
+          log('🔍 No encontrado producto con serverId=999', 'warn');
+        }
+      } catch (e) {
+        log(`❌ Error: ${e.message}`, 'error');
+      }
+    };
+
+    document.getElementById('btn-update-product').onclick = async () => {
+      if (!lastProductLocalId) return;
+      try {
+        await AnimeStockIDB.updateProduct(lastProductLocalId, { price: 299.99, stock: 8 });
+        const updated = await AnimeStockIDB.getProduct(lastProductLocalId);
+        log(`🔄 Producto actualizado: price=${updated.price}, stock=${updated.stock}, version=${updated.version}`, 'ok');
+      } catch (e) {
+        log(`❌ Error: ${e.message}`, 'error');
+      }
+    };
+
+    document.getElementById('btn-delete-product').onclick = async () => {
+      if (!lastProductLocalId) return;
+      if (!confirm('Eliminar el último producto creado?')) return;
+      try {
+        await AnimeStockIDB.deleteProduct(lastProductLocalId);
+        log(`🗑️ Producto eliminado: ${lastProductLocalId}`, 'warn');
+        lastProductLocalId = null;
+        enable('btn-update-product', false);
+        enable('btn-delete-product', false);
+      } catch (e) {
+        log(`❌ Error: ${e.message}`, 'error');
+      }
+    };
+
+    // 3. Mutaciones
+    document.getElementById('btn-add-mutation').onclick = async () => {
+      try {
+        const localId = AnimeStockIDB.generateLocalId();
+        const idempotencyKey = `product-create-${localId}`;
+        const mutationId = await AnimeStockIDB.addMutation({
+          entity: 'product',
+          operation: 'create',
+          localId,
+          payload: { nombre: 'Mutation Product', precio: 199.99 },
+          idempotencyKey
+        });
+        lastMutationId = mutationId;
+        log(`✅ Mutación CREATE añadida: id=${mutationId}, key=${idempotencyKey}`, 'ok');
+        enable('btn-update-mutation', true);
+      } catch (e) {
+        log(`❌ Error: ${e.message}`, 'error');
+      }
+    };
+
+    document.getElementById('btn-add-mutation-update').onclick = async () => {
+      try {
+        const localId = AnimeStockIDB.generateLocalId();
+        const idempotencyKey = `product-update-${localId}`;
+        const mutationId = await AnimeStockIDB.addMutation({
+          entity: 'product',
+          operation: 'update',
+          localId,
+          payload: { serverId: 123, precio: 299.99 },
+          idempotencyKey
+        });
+        log(`✅ Mutación UPDATE añadida: id=${mutationId}, key=${idempotencyKey}`, 'ok');
+      } catch (e) {
+        log(`❌ Error: ${e.message}`, 'error');
+      }
+    };
+
+    document.getElementById('btn-list-pending-mut').onclick = async () => {
+      try {
+        const muts = await AnimeStockIDB.getPendingMutations();
+        log(`⏳ Mutaciones pendientes: ${muts.length}`, 'info');
+        muts.forEach(m => log(`  - id=${m.id} | ${m.operation} | localId=${m.localId.substring(0,8)}... | key=${m.idempotencyKey}`));
+      } catch (e) {
+        log(`❌ Error: ${e.message}`, 'error');
+      }
+    };
+
+    document.getElementById('btn-list-all-mut').onclick = async () => {
+      try {
+        const muts = await AnimeStockIDB.getMutationsByStatus('pending');
+        log(`📋 Mutaciones (pending): ${muts.length}`, 'info');
+        for (const status of ['pending', 'syncing', 'done', 'error']) {
+          const arr = await AnimeStockIDB.getMutationsByStatus(status);
+          if (arr.length) log(`  ${status}: ${arr.length}`);
+        }
+      } catch (e) {
+        log(`❌ Error: ${e.message}`, 'error');
+      }
+    };
+
+    document.getElementById('btn-update-mutation').onclick = async () => {
+      if (!lastMutationId) return;
+      try {
+        await AnimeStockIDB.updateMutation(lastMutationId, { status: 'done' });
+        log(`✅ Mutación ${lastMutationId} marcada como DONE`, 'ok');
+      } catch (e) {
+        log(`❌ Error: ${e.message}`, 'error');
+      }
+    };
+
+    // 4. Meta
+    document.getElementById('btn-set-meta').onclick = async () => {
+      try {
+        const now = new Date().toISOString();
+        await AnimeStockIDB.setMeta('lastSync', now);
+        log(`💾 lastSync guardado: ${now}`, 'ok');
+      } catch (e) {
+        log(`❌ Error: ${e.message}`, 'error');
+      }
+    };
+
+    document.getElementById('btn-get-meta').onclick = async () => {
+      try {
+        const val = await AnimeStockIDB.getMeta('lastSync');
+        log(`📖 lastSync: ${val}`, 'info');
+      } catch (e) {
+        log(`❌ Error: ${e.message}`, 'error');
+      }
+    };
+
+    document.getElementById('btn-get-offset').onclick = async () => {
+      try {
+        const val = await AnimeStockIDB.getMeta('serverTimeOffset');
+        log(`📖 serverTimeOffset: ${val}ms`, 'info');
+      } catch (e) {
+        log(`❌ Error: ${e.message}`, 'error');
+      }
+    };
+
+    // 5. Eventos y Utilidades
+    document.getElementById('btn-test-events').onclick = async () => {
+      try {
+        const unsub = AnimeStockIDB.on('product-upserted', (detail) => {
+          log(`📡 Evento product-upserted: ${detail.localId.substring(0,8)}...`, 'info');
+        });
+        // Trigger
+        await AnimeStockIDB.putProduct({
+          localId: AnimeStockIDB.generateLocalId(),
+          name: 'Event Test',
+          anime: 'Test',
+          category: 'Test',
+          categoryId: 1,
+          cost: 10,
+          price: 20,
+          stock: 1,
+          minStock: 0,
+          active: true
+        });
+        unsub();
+        log('✅ Eventos funcionando correctamente', 'ok');
+      } catch (e) {
+        log(`❌ Error: ${e.message}`, 'error');
+      }
+    };
+
+    document.getElementById('btn-gen-uuid').onclick = () => {
+      const uuid = AnimeStockIDB.generateLocalId();
+      log(`🆔 UUID generado: ${uuid}`, 'ok');
+    };
+
+    document.getElementById('btn-count-all').onclick = async () => {
+      try {
+        const [products, pendingProducts, pendingMuts] = await Promise.all([
+          AnimeStockIDB.countProducts(),
+          AnimeStockIDB.countProducts('pending'),
+          AnimeStockIDB.countPendingMutations()
+        ]);
+        log(`📊 Conteo: products=${products}, pending=${pendingProducts}, mutations_pending=${pendingMuts}`, 'info');
+      } catch (e) {
+        log(`❌ Error: ${e.message}`, 'error');
+      }
+    };
+
+    document.getElementById('btn-clear-log').onclick = () => {
+      logEl.innerHTML = '';
+      log('Log limpiado');
+    };
+
+    // Auto-init al cargar
+    window.addEventListener('DOMContentLoaded', async () => {
+      try {
+        await AnimeStockIDB.init();
+        log('✅ Auto-inicialización completada', 'ok');
+        enable('btn-check-stores', true);
+        enable('btn-clear-db', true);
+      } catch (e) {
+        log(`❌ Auto-init falló: ${e.message}`, 'error');
+      }
+    });
+  </script>
+</body>
+</html>

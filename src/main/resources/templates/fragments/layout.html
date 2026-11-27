@@ -1,0 +1,561 @@
+<!DOCTYPE html>
+<html lang="es" xmlns:th="http://www.thymeleaf.org">
+
+<head th:fragment="head(pageTitle)">
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description"
+    content="AnimeStock · Panel de gestión de stock, ventas y ganancias de peluchitos de anime.">
+  <meta name="theme-color" content="#b8a4d9">
+
+  <title th:text="|${pageTitle} · AnimeStock|">AnimeStock · Gestión de peluchitos</title>
+
+  <link rel="manifest" href="/manifest.webmanifest">
+  <link rel="icon" href="/icons/icon.svg" type="image/svg+xml">
+
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap"
+    rel="stylesheet">
+
+  <link rel="stylesheet" href="/css/styles.css">
+  <link rel="stylesheet" href="/css/sales.css">
+  <link rel="stylesheet" href="/css/pages.css">
+  <link rel="stylesheet" href="/css/reports.css">
+  <link rel="stylesheet" href="/css/print.css" media="print">
+</head>
+
+<body>
+
+  
+  <aside class="sidebar" id="sidebar" aria-label="Navegación principal" th:fragment="sidebar(current)">
+    <div class="sidebar__brand">
+      <div class="sidebar__logo" aria-hidden="true">🧸</div>
+      <div class="sidebar__brand-text">
+        <h1 class="sidebar__title">AnimeStock</h1>
+        <p class="sidebar__subtitle">Gestión de peluchitos</p>
+      </div>
+    </div>
+
+    <nav class="nav" aria-label="Secciones del panel">
+      <a class="nav__item" th:href="@{/}" th:classappend="${current == 'dashboard'} ? ' is-active'"
+        th:attr="aria-current=${current == 'dashboard'} ? 'page' : null">
+        <span class="nav__icon" aria-hidden="true">▦</span>
+        <span class="nav__label">Dashboard</span>
+      </a>
+      <a class="nav__item" th:href="@{/inventario}" th:classappend="${current == 'inventario'} ? ' is-active'"
+        th:attr="aria-current=${current == 'inventario'} ? 'page' : null">
+        <span class="nav__icon" aria-hidden="true">📦</span>
+        <span class="nav__label">Inventario</span>
+      </a>
+      <a class="nav__item" th:href="@{/proveedores}" th:classappend="${current == 'proveedores'} ? ' is-active'"
+        th:attr="aria-current=${current == 'proveedores'} ? 'page' : null">
+        <span class="nav__icon" aria-hidden="true">🚚</span>
+        <span class="nav__label">Proveedores</span>
+      </a>
+      <a class="nav__item" th:href="@{/ventas}" th:classappend="${current == 'ventas'} ? ' is-active'"
+        th:attr="aria-current=${current == 'ventas'} ? 'page' : null">
+        <span class="nav__icon" aria-hidden="true">💰</span>
+        <span class="nav__label">Ventas</span>
+      </a>
+      <a class="nav__item" th:href="@{/pedidos}" th:classappend="${current == 'pedidos'} ? ' is-active'"
+        th:attr="aria-current=${current == 'pedidos'} ? 'page' : null">
+        <span class="nav__icon" aria-hidden="true">🛒</span>
+        <span class="nav__label">Pedidos</span>
+      </a>
+      <a class="nav__item" th:href="@{/caja}" th:classappend="${current == 'caja'} ? ' is-active'"
+        th:attr="aria-current=${current == 'caja'} ? 'page' : null">
+        <span class="nav__icon" aria-hidden="true">🏦</span>
+        <span class="nav__label">Caja</span>
+      </a>
+      <a class="nav__item" th:href="@{/reportes}" th:classappend="${current == 'reports'} ? ' is-active'"
+        th:attr="aria-current=${current == 'reports'} ? 'page' : null">
+        <span class="nav__icon" aria-hidden="true">📊</span>
+        <span class="nav__label">Reportes</span>
+      </a>
+      <a class="nav__item" th:href="@{/configuracion}" th:classappend="${current == 'configuracion'} ? ' is-active'"
+        th:attr="aria-current=${current == 'configuracion'} ? 'page' : null">
+        <span class="nav__icon" aria-hidden="true">⚙️</span>
+        <span class="nav__label">Configuración</span>
+      </a>
+    </nav>
+
+    <div class="sidebar__footer">
+      <div class="user">
+        <span class="user__avatar" aria-hidden="true">BM</span>
+        <span class="user__meta">
+          <span class="user__name">Byron Chávez</span>
+          <span class="user__role">Administrador</span>
+        </span>
+      </div>
+    </div>
+  </aside>
+
+  
+  <div class="scrim" id="sidebarScrim" hidden th:fragment="scrim"></div>
+
+  
+  <header class="topbar" th:fragment="topbar(pageTitle, pageSubtitle)">
+    <button class="icon-btn topbar__burger" type="button" id="menuToggle" aria-label="Abrir menú de navegación"
+      aria-expanded="false" aria-controls="sidebar">
+      <span aria-hidden="true">☰</span>
+    </button>
+
+    <div class="topbar__heading">
+      <h2 class="topbar__title" id="topbarTitle" th:text="${pageTitle}">Sección</h2>
+      <p class="topbar__subtitle" id="topbarSubtitle" th:text="${pageSubtitle}">Descripción</p>
+    </div>
+
+    <div class="topbar__actions">
+      <button class="icon-btn" type="button" aria-label="Notificaciones, 3 sin leer">
+        <span aria-hidden="true">🔔</span>
+        <span class="icon-btn__dot" aria-hidden="true"></span>
+      </button>
+      <button class="btn btn--primary" type="button" id="newSaleBtn">+ Nueva venta</button>
+    </div>
+  </header>
+
+  
+  <div class="modal-overlay" id="checkoutModal" role="dialog" aria-modal="true" aria-labelledby="checkoutTitle"
+    aria-describedby="checkoutSubtitle" hidden th:fragment="checkoutModal">
+    <div class="modal modal--wide">
+
+      <header class="modal__head">
+        <div class="modal__headings">
+          <h2 class="modal__title" id="checkoutTitle">Nueva venta</h2>
+          <p class="modal__subtitle" id="checkoutSubtitle">Agregá productos, elegí cliente y cobrá</p>
+        </div>
+        <button class="icon-btn" type="button" data-modal-close aria-label="Cerrar la venta sin guardar">
+          <span aria-hidden="true">✕</span>
+        </button>
+      </header>
+
+      <div class="modal__body">
+        <div class="checkout">
+
+          
+          <div class="checkout__col">
+
+            <section class="checkout-block" aria-labelledby="checkoutProductsTitle">
+              <div class="checkout-block__head">
+                <h3 class="checkout-block__title" id="checkoutProductsTitle">Productos</h3>
+                <span class="checkout-block__hint">Buscá por nombre o anime</span>
+              </div>
+
+              <div class="drop" id="checkoutProductSearchBox">
+                <label class="field__label" for="checkoutProductSearch">Agregar producto</label>
+                <input class="input" type="search" id="checkoutProductSearch" autocomplete="off" role="combobox"
+                  aria-expanded="false" aria-autocomplete="list" aria-controls="checkoutProductResults"
+                  placeholder="Ej.: gojo, pikachu, levi…">
+                <div class="drop__results" id="checkoutProductResults" role="listbox"
+                  aria-label="Resultados de productos" hidden></div>
+              </div>
+            </section>
+
+            <section class="checkout-block" aria-labelledby="checkoutCartTitle">
+              <div class="checkout-block__head">
+                <h3 class="checkout-block__title" id="checkoutCartTitle">Carrito</h3>
+                <span class="checkout-block__hint" id="checkoutItemCount">0 ítems</span>
+              </div>
+
+              <p class="field__error" id="checkoutCartError" role="alert" hidden></p>
+              <p class="field__hint" id="checkoutCartEmpty">Todavía no agregaste productos.</p>
+              <div class="cart" id="checkoutCart" hidden></div>
+            </section>
+
+          </div>
+
+          
+          <div class="checkout__col">
+
+            <section class="checkout-block" aria-labelledby="checkoutCustomerBlockTitle">
+              <div class="checkout-block__head">
+                <h3 class="checkout-block__title" id="checkoutCustomerBlockTitle">Cliente</h3>
+              </div>
+
+              <p class="field__hint">Sin elegir, la venta queda a nombre de <strong>Consumidor final</strong>.</p>
+              <p class="field__error" id="checkoutCustomerError" role="alert" hidden></p>
+
+              <div class="checkout-customer" id="checkoutCustomerSelected" hidden></div>
+
+              <div class="drop" id="checkoutCustomerSearchBox">
+                <label class="field__label" for="checkoutCustomerSearch">Buscar cliente</label>
+                <input class="input" type="search" id="checkoutCustomerSearch" autocomplete="off" role="combobox"
+                  aria-expanded="false" aria-autocomplete="list" aria-controls="checkoutCustomerResults"
+                  placeholder="Buscar por nombre o email…">
+                <div class="drop__results" id="checkoutCustomerResults" role="listbox"
+                  aria-label="Resultados de clientes" hidden></div>
+              </div>
+
+              <button class="btn btn--ghost btn--sm" type="button" id="checkoutNewCustomerToggle"
+                style="align-self:flex-start">+ Registrar cliente nuevo</button>
+
+              <div class="new-customer-form" id="checkoutNewCustomerForm" hidden>
+                <div class="field">
+                  <label class="field__label" for="newCustomerName">Nombre *</label>
+                  <input class="input" type="text" id="newCustomerName" autocomplete="off">
+                </div>
+                <div class="field">
+                  <label class="field__label" for="newCustomerEmail">Email</label>
+                  <input class="input" type="email" id="newCustomerEmail" autocomplete="off">
+                </div>
+                <div class="field">
+                  <label class="field__label" for="newCustomerPhone">Teléfono</label>
+                  <input class="input" type="tel" id="newCustomerPhone" autocomplete="off">
+                </div>
+                <p class="field__error" id="newCustomerError" role="alert" hidden></p>
+                <div class="new-customer-form__actions">
+                  <button class="btn btn--ghost btn--sm" type="button" id="newCustomerCancel">Cancelar</button>
+                  <button class="btn btn--primary btn--sm" type="button" id="newCustomerSubmit">Guardar cliente</button>
+                </div>
+              </div>
+            </section>
+
+            <section class="checkout-block" aria-labelledby="checkoutPaymentTitle">
+              <div class="checkout-block__head">
+                <h3 class="checkout-block__title" id="checkoutPaymentTitle">Forma de pago</h3>
+              </div>
+              <div class="pay-cards" id="checkoutPaymentCards" role="radiogroup" aria-label="Forma de pago"></div>
+            </section>
+
+            <section class="checkout-block" aria-labelledby="checkoutDetailsTitle">
+              <div class="checkout-block__head">
+                <h3 class="checkout-block__title" id="checkoutDetailsTitle">Datos del cobro</h3>
+              </div>
+
+              
+              <div class="checkout-fields" id="checkoutCashFields">
+                <div class="field">
+                  <label class="field__label" for="checkoutAmountReceived">Monto recibido *</label>
+                  <input class="input" type="number" id="checkoutAmountReceived" min="0" step="1" inputmode="numeric"
+                    placeholder="0">
+                </div>
+                <div class="field">
+                  <span class="field__label">Cambio</span>
+                  <div class="change-box" id="checkoutChangeBox">
+                    <span class="change-box__label">a devolver</span>
+                    <span class="change-box__value" id="checkoutChange" aria-live="polite">$0</span>
+                  </div>
+                </div>
+              </div>
+              <p class="field__error" id="checkoutCashError" role="alert" hidden></p>
+
+              
+              <div class="checkout-fields checkout-fields--single" id="checkoutReferenceField" hidden>
+                <div class="field">
+                  <label class="field__label" for="checkoutReference">Referencia de la transferencia</label>
+                  <input class="input" type="text" id="checkoutReference" autocomplete="off"
+                    placeholder="Ej.: MP-1234-5566">
+                  <p class="field__hint">Aparece en el comprobante para poder conciliar.</p>
+                </div>
+              </div>
+
+              <div class="field" style="margin-top:12px">
+                <label class="field__label" for="checkoutStatus">Estado de la venta</label>
+                <select class="select" id="checkoutStatus">
+                  <option value="PAGADO">Pagado — entra a caja</option>
+                  <option value="PENDIENTE">Pendiente — queda por cobrar</option>
+                  <option value="ENVIADO">Enviado — ya está en camino</option>
+                </select>
+                <p class="field__hint" id="checkoutStatusHint">Se registra el ingreso en caja al confirmar.</p>
+              </div>
+
+              <div class="field" style="margin-top:12px">
+                <label class="field__label" for="checkoutNotes">Notas internas</label>
+                <textarea class="textarea" id="checkoutNotes" maxlength="200"
+                  placeholder="Ej.: el cliente pasa a retirar mañana por la tarde"></textarea>
+                <p class="notes-counter" id="checkoutNotesCount" aria-live="polite">0 / 200</p>
+              </div>
+            </section>
+
+          </div>
+        </div>
+
+        
+        <footer class="checkout-foot">
+          <div class="checkout-summary" aria-live="polite">
+            <div class="checkout-summary__row">
+              <span>Subtotal</span><b id="checkoutSubtotalText">$0</b>
+            </div>
+            <div class="checkout-summary__row" id="checkoutDiscountRow" hidden>
+              <span>Descuento</span><b id="checkoutDiscountText">$0</b>
+            </div>
+            <div class="checkout-summary__total">
+              <span>Total</span><b id="checkoutTotalText">$0</b>
+            </div>
+          </div>
+
+          <div class="discount">
+            <span class="discount__label" id="discountLabel">Descuento</span>
+            <span class="discount__toggle" role="group" aria-labelledby="discountLabel">
+              <button class="discount__option is-active" type="button" id="discountPercent"
+                aria-pressed="true">%</button>
+              <button class="discount__option" type="button" id="discountFixed" aria-pressed="false">$</button>
+            </span>
+            <input class="input discount__input" type="number" id="checkoutDiscountInput" min="0" max="100" step="1"
+              inputmode="numeric" aria-label="Descuento en porcentaje" hidden>
+          </div>
+
+          <div class="checkout-actions">
+            <button class="btn btn--ghost" type="button" id="checkoutCancel">Cancelar</button>
+            <button class="btn btn--primary" type="button" id="checkoutConfirm">Confirmar y generar comprobante</button>
+          </div>
+        </footer>
+      </div>
+
+    </div>
+  </div>
+
+  
+  <div class="modal-overlay" id="receiptModal" role="dialog" aria-modal="true" aria-labelledby="receiptModalTitle"
+    aria-describedby="receiptModalSubtitle" hidden th:fragment="receiptModal">
+    <div class="modal">
+      <header class="modal__head">
+        <div class="modal__headings">
+          <h2 class="modal__title" id="receiptModalTitle">Comprobante</h2>
+          <p class="modal__subtitle" id="receiptModalSubtitle"></p>
+        </div>
+        <button class="icon-btn" type="button" data-modal-close aria-label="Cerrar el comprobante">
+          <span aria-hidden="true">✕</span>
+        </button>
+      </header>
+
+      <div class="modal__body">
+        <div class="receipt-mount" id="receipt-mount"></div>
+      </div>
+
+      <footer class="modal__foot modal__foot--end">
+        <span class="format-toggle" role="group" aria-label="Tamaño de papel">
+          <button class="format-toggle__option is-active" type="button" data-receipt-format="ticket"
+            aria-pressed="true">Ticket 80mm</button>
+          <button class="format-toggle__option" type="button" data-receipt-format="a4" aria-pressed="false">A4</button>
+        </span>
+        <button class="btn btn--ghost" type="button" data-receipt-email>
+          <span aria-hidden="true">✉</span> Enviar por email
+        </button>
+        <button class="btn btn--ghost" type="button" data-receipt-download>
+          <span aria-hidden="true">⬇</span> Descargar
+        </button>
+        <button class="btn btn--primary" type="button" data-receipt-print>
+          <span aria-hidden="true">🖨</span> Imprimir
+        </button>
+      </footer>
+    </div>
+  </div>
+
+  
+  <div class="modal-overlay" id="cashModal" role="dialog" aria-modal="true" aria-labelledby="cashModalTitle" hidden
+    th:fragment="cashModal">
+    <div class="modal modal--sm">
+      <header class="modal__head">
+        <div class="modal__headings">
+          <h2 class="modal__title" id="cashModalTitle">Nuevo movimiento</h2>
+          <p class="modal__subtitle">Ingreso o egreso manual de la caja</p>
+        </div>
+        <button class="icon-btn" type="button" data-modal-close aria-label="Cerrar sin guardar">
+          <span aria-hidden="true">✕</span>
+        </button>
+      </header>
+
+      <div class="modal__body">
+        <p class="field__error" id="cashMovementError" role="alert" hidden></p>
+
+        <div class="checkout-fields" style="margin-top:14px">
+          <div class="field">
+            <label class="field__label" for="cashMovementType">Tipo</label>
+            <select class="select" id="cashMovementType">
+              <option value="EGRESO">Egreso (sale de la caja)</option>
+              <option value="INGRESO">Ingreso (entra a la caja)</option>
+            </select>
+          </div>
+
+          <div class="field">
+            <label class="field__label" for="cashAmount">Monto *</label>
+            <input class="input" type="number" id="cashAmount" min="1" step="1" inputmode="numeric">
+          </div>
+        </div>
+
+        <div class="field" style="margin-top:14px">
+          <label class="field__label" for="cashDescription">Descripción *</label>
+          <input class="input" type="text" id="cashDescription" autocomplete="off"
+            placeholder="Ej.: reposición de fondo fijo">
+        </div>
+
+        <div class="field" style="margin-top:14px">
+          <label class="field__label" for="cashDate">Fecha</label>
+          <input class="input" type="date" id="cashDate">
+        </div>
+      </div>
+
+      <footer class="modal__foot modal__foot--end">
+        <button class="btn btn--ghost" type="button" id="cashCancel">Cancelar</button>
+        <button class="btn btn--primary" type="button" id="cashSubmit">Registrar movimiento</button>
+      </footer>
+    </div>
+  </div>
+
+  
+  <div class="modal-overlay" id="cashSessionModal" role="dialog" aria-modal="true" aria-labelledby="cashSessionTitle"
+    hidden th:fragment="cashSessionModal">
+    <div class="modal modal--sm">
+      <header class="modal__head">
+        <div class="modal__headings">
+          <h2 class="modal__title" id="cashSessionTitle">Abrir caja</h2>
+          <p class="modal__subtitle" id="cashSessionSubtitle">Registrá el fondo inicial del turno</p>
+        </div>
+        <button class="icon-btn" type="button" data-modal-close aria-label="Cerrar sin guardar">
+          <span aria-hidden="true">✕</span>
+        </button>
+      </header>
+
+      <div class="modal__body">
+        <p class="field__error" id="cashSessionError" role="alert" hidden></p>
+
+        
+        <div id="cashOpenFields">
+          <div class="field" style="margin-top:14px">
+            <label class="field__label" for="cashOpeningAmount">Fondo inicial *</label>
+            <input class="input" type="number" id="cashOpeningAmount" min="0" step="1" inputmode="numeric"
+              placeholder="Ej.: 5000">
+            <p class="field__hint">Efectivo con el que arranca el turno. Podés poner 0.</p>
+          </div>
+        </div>
+
+        
+        <div id="cashCloseFields" hidden>
+          <div class="cash-session-summary" id="cashCloseSummary" style="margin-top:14px"></div>
+          <div class="field" style="margin-top:14px">
+            <label class="field__label" for="cashCloseCounted">Efectivo contado *</label>
+            <input class="input" type="number" id="cashCloseCounted" min="0" step="1" inputmode="numeric"
+              placeholder="Ej.: 8500">
+          </div>
+          <p class="field__hint" id="cashCloseDiff"></p>
+        </div>
+      </div>
+
+      <footer class="modal__foot modal__foot--end">
+        <button class="btn btn--ghost" type="button" id="cashSessionCancel">Cancelar</button>
+        <button class="btn btn--primary" type="button" id="cashSessionSubmit">Abrir caja</button>
+      </footer>
+    </div>
+  </div>
+
+  
+  <div class="modal-overlay" id="productModal" role="dialog" aria-modal="true" aria-labelledby="productModalTitle"
+    aria-describedby="productModalSubtitle" hidden th:fragment="productModal">
+    <div class="modal modal--wide">
+
+      <header class="modal__head">
+        <div class="modal__headings">
+          <h2 class="modal__title" id="productModalTitle">Nuevo producto</h2>
+          <p class="modal__subtitle" id="productModalSubtitle">Cargá los datos del producto</p>
+        </div>
+        <button class="icon-btn" type="button" data-modal-close aria-label="Cerrar sin guardar">
+          <span aria-hidden="true">✕</span>
+        </button>
+      </header>
+
+      <form class="modal__body" id="productForm" novalidate>
+        <div class="product-form">
+
+          
+          <div class="product-form__image">
+            <div class="image-drop" id="productImageDrop" role="button" tabindex="0"
+              aria-label="Elegir imagen del producto">
+              <input type="file" id="productImageInput" accept="image/jpeg,image/png,image/webp" hidden>
+              <img class="image-drop__img" id="productImagePreview" alt="" hidden>
+              <div class="image-drop__placeholder" id="productImagePlaceholder">
+                <span class="image-drop__icon" aria-hidden="true">📷</span>
+                <p class="image-drop__text">Arrastrá una imagen o hacé clic</p>
+                <small class="image-drop__hint">JPG/PNG/WebP · hasta 5 MB</small>
+              </div>
+            </div>
+            <button class="btn btn--ghost btn--sm" type="button" id="productImageClear" hidden>Quitar imagen</button>
+            <p class="field__hint">La imagen se guarda en el servidor al guardar el producto. Formatos: JPG, PNG o
+              WebP.</p>
+          </div>
+
+          
+          <div class="product-form__fields">
+            <p class="field__error" id="productError" role="alert" hidden></p>
+
+            <div class="field" id="productNameField">
+              <label class="field__label" for="productName">Nombre *</label>
+              <input class="input" type="text" id="productName" autocomplete="off" maxlength="80" required>
+            </div>
+
+            <div class="field">
+              <label class="field__label" for="productAnime">Anime</label>
+              <input class="input" type="text" id="productAnime" autocomplete="off">
+            </div>
+
+            <div class="field">
+              <label class="field__label" for="productCategory">Categoría</label>
+              <div class="field-row">
+                <select class="select" id="productCategory">
+                  <option value="">Sin categoría</option>
+                </select>
+                <button class="btn btn--ghost btn--icon" type="button" id="productCategoryAdd"
+                  aria-label="Crear una categoría nueva" title="Crear categoría">+</button>
+              </div>
+            </div>
+
+            <div class="field">
+              <label class="field__label" for="productSku">SKU</label>
+              <input class="input" type="text" id="productSku" autocomplete="off"
+                placeholder="Se genera solo si lo dejás vacío">
+            </div>
+
+            <div class="field-row">
+              <div class="field" id="productCostField">
+                <label class="field__label" for="productCost">Costo *</label>
+                <input class="input" type="number" id="productCost" min="0" step="0.01" inputmode="decimal">
+              </div>
+              <div class="field" id="productPriceField">
+                <label class="field__label" for="productPrice">Precio *</label>
+                <input class="input" type="number" id="productPrice" min="0" step="0.01" inputmode="decimal">
+              </div>
+            </div>
+
+            <div class="field-row">
+              <div class="field" id="productStockField">
+                <label class="field__label" for="productStock">Stock *</label>
+                <input class="input" type="number" id="productStock" min="0" step="1" inputmode="numeric" value="0">
+              </div>
+              <div class="field" id="productMinStockField">
+                <label class="field__label" for="productMinStock">Stock mínimo</label>
+                <input class="input" type="number" id="productMinStock" min="0" step="1" inputmode="numeric"
+                  value="0">
+              </div>
+            </div>
+
+            <label class="checkbox">
+              <input type="checkbox" id="productActive" checked>
+              <span>Producto activo</span>
+            </label>
+          </div>
+        </div>
+      </form>
+
+      <footer class="modal__foot modal__foot--end">
+        <button class="btn btn--ghost" type="button" data-modal-close>Cancelar</button>
+        <button class="btn btn--primary" type="submit" form="productForm" id="productSubmit">Guardar producto</button>
+      </footer>
+    </div>
+  </div>
+
+  
+  <div class="toasts" id="toasts" role="region" aria-live="polite" aria-label="Notificaciones" th:fragment="toasts"></div>
+
+  
+  <th:block th:fragment="scripts">
+    <script src="/js/mock-data.js"></script>
+    <script src="/js/ui.js"></script>
+    <script src="/js/receipt.js"></script>
+    <script src="/js/checkout.js"></script>
+    <script src="/js/app.js"></script>
+  </th:block>
+
+</body>
+
+</html>

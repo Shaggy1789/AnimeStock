@@ -1,0 +1,138 @@
+<!DOCTYPE html>
+<html lang="es" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments/layout :: head('Inventario')}"></head>
+
+<body data-page="inventario">
+
+  <aside th:replace="~{fragments/layout :: sidebar('inventario')}"></aside>
+  <div th:replace="~{fragments/layout :: scrim}"></div>
+
+  <div class="app">
+
+    <header th:replace="~{fragments/layout :: topbar('Inventario', 'Control de stock y productos')}"></header>
+
+    <main class="main" id="main">
+
+      <section class="panel is-active" id="panel-inventario" data-panel="inventario" aria-labelledby="inventarioTitle">
+        <div class="panel-head">
+          <div>
+            <h3 class="panel-head__title" id="inventarioTitle">Inventario</h3>
+            <p class="panel-head__text">Controlá el stock, los costos y los precios de tu catálogo.</p>
+          </div>
+          <div class="panel-head__actions">
+            <button class="btn btn--ghost" type="button" id="inventoryExportCsv">
+              <span aria-hidden="true">⬇</span> Exportar CSV
+            </button>
+            <button class="btn btn--primary" type="button" id="inventoryNewProduct">
+              <span aria-hidden="true">+</span> Nuevo producto
+            </button>
+          </div>
+        </div>
+
+        <p class="panel-status" id="inventoryStatus" role="status" hidden></p>
+
+        <div class="mini-kpi-grid" id="inventoryKpis" role="list" aria-label="Resumen del inventario"></div>
+
+        <button class="filters-toggle" type="button" id="inventoryFiltersToggle" aria-expanded="true"
+          aria-controls="inventoryFilters">
+          <span><span aria-hidden="true">🔎</span> Filtros</span>
+          <span class="filters-toggle__chevron" aria-hidden="true">▾</span>
+        </button>
+
+        <div class="filters-bar" id="inventoryFilters" role="search" aria-label="Filtros de inventario">
+          <div class="field search-box">
+            <label class="field__label" for="inventorySearch">Buscar</label>
+            <span class="search-box__icon" aria-hidden="true">🔎</span>
+            <input class="input" type="search" id="inventorySearch" autocomplete="off"
+              placeholder="Nombre, anime o SKU…">
+          </div>
+
+          <div class="field">
+            <label class="field__label" for="inventoryCategory">Categoría</label>
+            <select class="select" id="inventoryCategory">
+              <option value="todos">Todas las categorías</option>
+            </select>
+          </div>
+
+          <div class="field">
+            <label class="field__label" for="inventoryStock">Stock</label>
+            <select class="select" id="inventoryStock">
+              <option value="todos">Todos</option>
+              <option value="bajo">Bajo mínimo</option>
+              <option value="sin">Sin stock</option>
+              <option value="ok">En stock</option>
+            </select>
+          </div>
+
+          <div class="field">
+            <label class="field__label" for="inventoryOrder">Orden</label>
+            <select class="select" id="inventoryOrder">
+              <option value="name_asc" selected>Nombre (A-Z)</option>
+              <option value="stock_asc">Stock (menor primero)</option>
+              <option value="price_desc">Precio (mayor primero)</option>
+              <option value="recent">Más recientes</option>
+            </select>
+          </div>
+
+          <div class="field">
+            <label class="field__label" for="inventoryPageSize">Por página</label>
+            <select class="select" id="inventoryPageSize">
+              <option value="10">10</option>
+              <option value="25" selected>25</option>
+              <option value="50">50</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="panel-head__actions" style="justify-content:flex-end;margin-top:-4px">
+          <button class="btn btn--ghost btn--sm" type="button" id="inventoryClearFilters">Limpiar filtros</button>
+        </div>
+
+        <article class="card card--table" id="inventoryTableCard">
+          <div class="table-scroll" tabindex="0" role="region"
+            aria-label="Tabla de inventario, deslizable horizontalmente">
+            <table class="table">
+              <caption class="sr-only">Listado de productos en inventario</caption>
+              <thead>
+                <tr>
+                  <th scope="col">Producto</th>
+                  <th scope="col">Anime</th>
+                  <th scope="col">Categoría</th>
+                  <th scope="col" class="table__num">Costo</th>
+                  <th scope="col" class="table__num">Precio</th>
+                  <th scope="col" class="table__num">Margen</th>
+                  <th scope="col">Stock</th>
+                  <th scope="col" class="table__num">Acciones</th>
+                </tr>
+              </thead>
+              <tbody id="inventoryRows"></tbody>
+            </table>
+          </div>
+        </article>
+
+        <div class="empty" id="inventoryEmpty" hidden>
+          <span class="empty__icon" aria-hidden="true">📦</span>
+          <h4 class="empty__title">Sin productos para mostrar</h4>
+          <p class="empty__text">Probá con otro filtro o cargá un producto nuevo.</p>
+        </div>
+
+        <div class="pagination">
+          <p class="panel-info" id="inventoryInfo"></p>
+          <div class="pagination__controls" id="inventoryPagination"></div>
+        </div>
+      </section>
+
+    </main>
+  </div>
+
+  <div th:replace="~{fragments/layout :: productModal}"></div>
+  <div th:replace="~{fragments/layout :: checkoutModal}"></div>
+  <div th:replace="~{fragments/layout :: receiptModal}"></div>
+  <div th:replace="~{fragments/layout :: toasts}"></div>
+
+  <th:block th:replace="~{fragments/layout :: scripts}"></th:block>
+  <script src="/js/inventory.js"></script>
+
+</body>
+
+</html>

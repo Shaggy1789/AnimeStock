@@ -1,0 +1,142 @@
+<!DOCTYPE html>
+<html lang="es" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments/layout :: head('Configuración')}"></head>
+
+<body data-page="configuracion">
+
+  <aside th:replace="~{fragments/layout :: sidebar('configuracion')}"></aside>
+  <div th:replace="~{fragments/layout :: scrim}"></div>
+
+  <div class="app">
+
+    <header th:replace="~{fragments/layout :: topbar('Configuración', 'Preferencias de la tienda')}"></header>
+
+    <main class="main" id="main">
+
+      <section class="panel is-active" id="panel-configuracion" data-panel="configuracion" aria-labelledby="configTitle">
+        <div class="panel-head">
+          <div>
+            <h3 class="panel-head__title" id="configTitle">Configuración</h3>
+            <p class="panel-head__text">Datos de la tienda y preferencias del panel. Se guardan en este navegador.</p>
+          </div>
+          <div class="panel-head__actions">
+            <button class="btn btn--ghost" type="button" id="settingsReset">Restablecer</button>
+            <button class="btn btn--primary" type="submit" form="settingsForm" id="settingsSave">Guardar cambios</button>
+          </div>
+        </div>
+
+        <p class="panel-status" id="settingsStatus" role="status" hidden></p>
+
+        <form class="settings-grid" id="settingsForm" novalidate>
+
+          <section class="card settings-card" aria-labelledby="settingsStoreTitle">
+            <header class="card__head">
+              <h4 class="card__title" id="settingsStoreTitle">🏪 Tienda</h4>
+              <p class="card__subtitle">Datos que aparecen en el comprobante</p>
+            </header>
+            <div class="settings-fields">
+              <div class="field field--full">
+                <label class="field__label" for="settingsStoreName">Nombre de la tienda *</label>
+                <input class="input" type="text" id="settingsStoreName" maxlength="60" autocomplete="off" required>
+              </div>
+              <div class="field">
+                <label class="field__label" for="settingsEmail">Email de contacto</label>
+                <input class="input" type="email" id="settingsEmail" autocomplete="off">
+              </div>
+              <div class="field">
+                <label class="field__label" for="settingsPhone">Teléfono</label>
+                <input class="input" type="tel" id="settingsPhone" autocomplete="off">
+              </div>
+              <div class="field field--full">
+                <label class="field__label" for="settingsAddress">Dirección</label>
+                <input class="input" type="text" id="settingsAddress" autocomplete="off">
+              </div>
+            </div>
+          </section>
+
+          <section class="card settings-card" aria-labelledby="settingsSalesTitle">
+            <header class="card__head">
+              <h4 class="card__title" id="settingsSalesTitle">🧾 Ventas y stock</h4>
+              <p class="card__subtitle">Comportamiento por defecto del panel</p>
+            </header>
+            <div class="settings-fields">
+              <div class="field">
+                <label class="field__label" for="settingsCurrency">Moneda</label>
+                <select class="select" id="settingsCurrency">
+                  <option value="ARS">Peso argentino ($)</option>
+                  <option value="USD">Dólar (US$)</option>
+                  <option value="EUR">Euro (€)</option>
+                  <option value="MXN">Peso mexicano ($)</option>
+                </select>
+              </div>
+              <div class="field">
+                <label class="field__label" for="settingsLowStock">Umbral de stock bajo</label>
+                <input class="input" type="number" id="settingsLowStock" min="0" step="1" inputmode="numeric">
+                <p class="field__hint">Se resalta en rojo cuando el stock cae por debajo.</p>
+              </div>
+              <div class="field">
+                <label class="field__label" for="settingsTax">IVA (%)</label>
+                <input class="input" type="number" id="settingsTax" min="0" max="100" step="1" inputmode="numeric">
+              </div>
+              <div class="field">
+                <label class="field__label" for="settingsPageSize">Filas por página</label>
+                <select class="select" id="settingsPageSize">
+                  <option value="10">10</option>
+                  <option value="25">25</option>
+                  <option value="50">50</option>
+                </select>
+              </div>
+            </div>
+            <label class="checkbox" style="margin-top:14px">
+              <input type="checkbox" id="settingsShowOutOfStock">
+              <span>Resaltar los productos agotados en el inventario</span>
+            </label>
+          </section>
+
+          <section class="card settings-card settings-card--wide" aria-labelledby="settingsAboutTitle">
+            <header class="card__head">
+              <h4 class="card__title" id="settingsAboutTitle">ℹ️ Acerca de AnimeStock</h4>
+              <p class="card__subtitle">Información de esta instalación</p>
+            </header>
+            <div class="kv-list">
+              <div class="kv">
+                <span class="kv__key">Versión del panel</span>
+                <span class="kv__val" id="settingsVersion">—</span>
+              </div>
+              <div class="kv">
+                <span class="kv__key">Origen de datos</span>
+                <span class="kv__val" id="settingsApiBase">—</span>
+              </div>
+              <div class="kv">
+                <span class="kv__key">Almacenamiento de preferencias</span>
+                <span class="kv__val"><code>localStorage · animestock:settings</code></span>
+              </div>
+              <div class="kv">
+                <span class="kv__key">Persistencia de estas preferencias</span>
+                <span class="kv__val">Solo en este navegador</span>
+              </div>
+            </div>
+            <p class="settings-note" style="margin-top:14px">
+              <span aria-hidden="true">💡</span>
+              <span>El backend todavía no expone <code>/api/settings</code>, por eso estas
+                preferencias se guardan localmente. Cuando exista el endpoint, esta pantalla se
+                conecta sin cambiar el diseño.</span>
+            </p>
+          </section>
+
+        </form>
+      </section>
+
+    </main>
+  </div>
+
+  <div th:replace="~{fragments/layout :: checkoutModal}"></div>
+  <div th:replace="~{fragments/layout :: receiptModal}"></div>
+  <div th:replace="~{fragments/layout :: toasts}"></div>
+
+  <th:block th:replace="~{fragments/layout :: scripts}"></th:block>
+  <script src="/js/settings.js"></script>
+
+</body>
+
+</html>

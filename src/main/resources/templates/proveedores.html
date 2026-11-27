@@ -1,0 +1,149 @@
+<!DOCTYPE html>
+<html lang="es" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments/layout :: head('Proveedores')}"></head>
+
+<body data-page="proveedores">
+
+  <aside th:replace="~{fragments/layout :: sidebar('proveedores')}"></aside>
+  <div th:replace="~{fragments/layout :: scrim}"></div>
+
+  <div class="app">
+
+    <header th:replace="~{fragments/layout :: topbar('Proveedores', 'Compras y reposición de stock')}"></header>
+
+    <main class="main" id="main">
+
+      <section class="panel is-active" id="panel-proveedores" data-panel="proveedores"
+        aria-labelledby="proveedoresTitle">
+        <div class="panel-head">
+          <div>
+            <h3 class="panel-head__title" id="proveedoresTitle">Proveedores y compras</h3>
+            <p class="panel-head__text">Registrá las compras a proveedores. Al recibir una compra sube el stock de cada producto.</p>
+          </div>
+          <div class="panel-head__actions">
+            <button class="btn btn--primary" type="button" id="purchasesNew">
+              <span aria-hidden="true">+</span> Nueva compra
+            </button>
+          </div>
+        </div>
+
+        <p class="panel-status" id="purchasesStatus" role="status" hidden></p>
+
+        <div class="mini-kpi-grid" id="purchasesKpis" role="list" aria-label="Resumen de compras"></div>
+
+        <article class="card card--table" id="purchasesTableCard">
+          <div class="table-scroll" tabindex="0" role="region"
+            aria-label="Tabla de compras, deslizable horizontalmente">
+            <table class="table">
+              <caption class="sr-only">Compras registradas a proveedores</caption>
+              <thead>
+                <tr>
+                  <th scope="col">Fecha</th>
+                  <th scope="col">Proveedor</th>
+                  <th scope="col">Productos</th>
+                  <th scope="col" class="table__num">Unidades</th>
+                  <th scope="col" class="table__num">Total</th>
+                  <th scope="col">Estado</th>
+                  <th scope="col" class="table__num">Acciones</th>
+                </tr>
+              </thead>
+              <tbody id="purchasesRows"></tbody>
+            </table>
+          </div>
+        </article>
+
+        <div class="empty" id="purchasesEmpty" hidden>
+          <span class="empty__icon" aria-hidden="true">🚚</span>
+          <h4 class="empty__title">Todavía no registraste compras</h4>
+          <p class="empty__text">Cargá tu primera compra para reponer stock y llevar el costo de reposición.</p>
+        </div>
+
+        <p class="panel-info" id="purchasesInfo"></p>
+      </section>
+
+    </main>
+  </div>
+
+  
+  <div class="modal-overlay" id="purchaseModal" role="dialog" aria-modal="true" aria-labelledby="purchaseModalTitle"
+    hidden>
+    <div class="modal modal--wide">
+
+      <header class="modal__head">
+        <div class="modal__headings">
+          <h2 class="modal__title" id="purchaseModalTitle">Nueva compra</h2>
+          <p class="modal__subtitle">Cargá los productos que le compraste al proveedor</p>
+        </div>
+        <button class="icon-btn" type="button" data-modal-close aria-label="Cerrar sin guardar">
+          <span aria-hidden="true">✕</span>
+        </button>
+      </header>
+
+      <div class="modal__body">
+        <p class="field__error" id="purchaseError" role="alert" hidden></p>
+
+        <div class="settings-fields" style="margin-top:6px">
+          <div class="field">
+            <label class="field__label" for="purchaseSupplier">Proveedor *</label>
+            <input class="input" type="text" id="purchaseSupplier" autocomplete="off" maxlength="60"
+              placeholder="Ej.: Distribuidora Otaku SRL">
+          </div>
+          <div class="field">
+            <label class="field__label" for="purchaseDate">Fecha</label>
+            <input class="input" type="date" id="purchaseDate">
+          </div>
+          <div class="field">
+            <label class="field__label" for="purchaseState">Estado</label>
+            <select class="select" id="purchaseState">
+              <option value="recibida">Recibida — ya sube el stock</option>
+              <option value="pendiente">Pendiente — todavía en camino</option>
+            </select>
+          </div>
+          <div class="field">
+            <label class="field__label" for="purchasePaid">Pago</label>
+            <select class="select" id="purchasePaid">
+              <option value="si">Pagada — registra un egreso en caja</option>
+              <option value="no">A pagar — no toca la caja</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="checkout-block__head" style="margin-top:16px">
+          <h3 class="checkout-block__title">Productos de la compra</h3>
+          <span class="checkout-block__hint">Elegí el producto, la cantidad y el costo unitario</span>
+        </div>
+
+        <div class="purchase-lines" id="purchaseLines"></div>
+
+        <button class="btn btn--ghost btn--sm" type="button" id="purchaseAddLine" style="margin-top:10px">
+          + Agregar producto
+        </button>
+
+        <div class="purchase-total">
+          <span class="purchase-total__label">Total de la compra</span>
+          <span class="purchase-total__value" id="purchaseTotalText">$0</span>
+        </div>
+
+        <label class="checkbox" style="margin-top:12px">
+          <input type="checkbox" id="purchaseUpdateCost" checked>
+          <span>Actualizar el costo del producto con el costo de compra</span>
+        </label>
+      </div>
+
+      <footer class="modal__foot modal__foot--end">
+        <button class="btn btn--ghost" type="button" data-modal-close>Cancelar</button>
+        <button class="btn btn--primary" type="button" id="purchaseConfirm">Registrar compra</button>
+      </footer>
+    </div>
+  </div>
+
+  <div th:replace="~{fragments/layout :: checkoutModal}"></div>
+  <div th:replace="~{fragments/layout :: receiptModal}"></div>
+  <div th:replace="~{fragments/layout :: toasts}"></div>
+
+  <th:block th:replace="~{fragments/layout :: scripts}"></th:block>
+  <script src="/js/suppliers.js"></script>
+
+</body>
+
+</html>

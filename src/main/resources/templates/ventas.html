@@ -1,0 +1,143 @@
+<!DOCTYPE html>
+<html lang="es" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments/layout :: head('Ventas')}"></head>
+
+<body data-page="ventas">
+
+  <aside th:replace="~{fragments/layout :: sidebar('ventas')}"></aside>
+  <div th:replace="~{fragments/layout :: scrim}"></div>
+
+  <div class="app">
+
+    <header th:replace="~{fragments/layout :: topbar('Ventas', 'Registro y seguimiento de ventas')}"></header>
+
+    <main class="main" id="main">
+
+      <section class="panel is-active" id="panel-ventas" data-panel="ventas" aria-labelledby="ventasTitle">
+        <div class="panel-head">
+          <div>
+            <h3 class="panel-head__title" id="ventasTitle">Registro de ventas</h3>
+            <p class="panel-head__text">Cada venta descuenta stock y genera su comprobante numerado.</p>
+          </div>
+          <div class="panel-head__actions">
+            <button class="btn btn--ghost" type="button" id="salesExportCsv">
+              <span aria-hidden="true">⬇</span> Exportar CSV
+            </button>
+            <button class="btn btn--primary" type="button" id="salesNewSale">
+              <span aria-hidden="true">+</span> Nueva venta
+            </button>
+          </div>
+        </div>
+
+        <p class="panel-status" id="salesStatus" role="status" hidden></p>
+
+        <div class="mini-kpi-grid" id="salesKpis" role="list" aria-label="Resumen de ventas"></div>
+
+        <button class="filters-toggle" type="button" id="salesFiltersToggle" aria-expanded="true"
+          aria-controls="salesFilters">
+          <span><span aria-hidden="true">🔎</span> Filtros</span>
+          <span class="filters-toggle__chevron" aria-hidden="true">▾</span>
+        </button>
+
+        <div class="filters-bar" id="salesFilters" role="search" aria-label="Filtros de ventas">
+          <div class="field search-box">
+            <label class="field__label" for="salesSearch">Buscar</label>
+            <span class="search-box__icon" aria-hidden="true">🔎</span>
+            <input class="input" type="search" id="salesSearch" autocomplete="off"
+              placeholder="Comprobante, cliente o producto…">
+          </div>
+
+          <div class="field">
+            <label class="field__label" for="salesPaymentFilter">Método de pago</label>
+            <select class="select" id="salesPaymentFilter">
+              <option value="todos">Todos</option>
+              <option value="EFECTIVO">Efectivo</option>
+              <option value="TRANSFERENCIA">Transferencia</option>
+              <option value="MERCADOPAGO">MercadoPago</option>
+              <option value="PAYPAL">PayPal</option>
+              <option value="OTRO">Otro</option>
+            </select>
+          </div>
+
+          <div class="field">
+            <label class="field__label" for="salesStatusFilter">Estado</label>
+            <select class="select" id="salesStatusFilter">
+              <option value="todos">Todos</option>
+              <option value="PAGADO">Pagado</option>
+              <option value="PENDIENTE">Pendiente</option>
+              <option value="ENVIADO">Enviado</option>
+              <option value="ANULADO">Anulado</option>
+            </select>
+          </div>
+
+          <div class="field">
+            <label class="field__label" for="salesRangeFilter">Período</label>
+            <select class="select" id="salesRangeFilter">
+              <option value="hoy">Hoy</option>
+              <option value="7d">Últimos 7 días</option>
+              <option value="mes">Este mes</option>
+              <option value="anio">Este año</option>
+              <option value="todo" selected>Todo</option>
+            </select>
+          </div>
+
+          <div class="field">
+            <label class="field__label" for="salesPageSize">Por página</label>
+            <select class="select" id="salesPageSize">
+              <option value="10">10</option>
+              <option value="25" selected>25</option>
+              <option value="50">50</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="panel-head__actions" style="justify-content:flex-end;margin-top:-4px">
+          <button class="btn btn--ghost btn--sm" type="button" id="salesClearFilters">Limpiar filtros</button>
+        </div>
+
+        <article class="card card--table" id="salesTableCard">
+          <div class="table-scroll" tabindex="0" role="region" aria-label="Tabla de ventas, deslizable horizontalmente">
+            <table class="table">
+              <caption class="sr-only">Listado de ventas registradas en AnimeStock</caption>
+              <thead>
+                <tr>
+                  <th scope="col">Comprobante</th>
+                  <th scope="col">Fecha</th>
+                  <th scope="col">Cliente</th>
+                  <th scope="col">Productos</th>
+                  <th scope="col">Pago</th>
+                  <th scope="col" class="table__num">Total</th>
+                  <th scope="col">Estado</th>
+                  <th scope="col" class="table__num">Acciones</th>
+                </tr>
+              </thead>
+              <tbody id="salesRows"></tbody>
+            </table>
+          </div>
+        </article>
+
+        <div class="empty" id="salesEmpty" hidden>
+          <span class="empty__icon" aria-hidden="true">🧾</span>
+          <h4 class="empty__title">Sin ventas para mostrar</h4>
+          <p class="empty__text">Probá con otro filtro o registrá una venta nueva.</p>
+        </div>
+
+        <div class="pagination">
+          <p class="panel-info" id="salesInfo"></p>
+          <div class="pagination__controls" id="salesPagination"></div>
+        </div>
+      </section>
+
+    </main>
+  </div>
+
+  <div th:replace="~{fragments/layout :: checkoutModal}"></div>
+  <div th:replace="~{fragments/layout :: receiptModal}"></div>
+  <div th:replace="~{fragments/layout :: toasts}"></div>
+
+  <th:block th:replace="~{fragments/layout :: scripts}"></th:block>
+  <script src="/js/sales.js"></script>
+
+</body>
+
+</html>
