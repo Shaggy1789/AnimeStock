@@ -1,4 +1,4 @@
-﻿# AnimeStock · Gestión de peluchitos de anime
+# AnimeStock · Gestión de peluchitos de anime
 
 Aplicación web para administrar una tienda de peluchitos de anime: **inventario,
 ventas, caja y reportes**, con dashboard de indicadores. El backend es
@@ -634,3 +634,5 @@ Para verificar que la app quedó **funcional de punta a punta**:
 ---
 
 <p align="center"><sub>Hecho con Spring Boot + JavaScript vanilla, sin frameworks de frontend.</sub></p>
+
+# AnimeStock
